@@ -1,0 +1,32 @@
+/* Custom styles for TodoMVC - MiniDOM implementation */
+
+.filters {
+  display: flex;
+  justify-content: center;
+}
+
+.filters li {
+  margin: 0 5px;
+}
+
+.edit {
+  display: none;
+}
+
+.editing .edit {
+  display: block;
+}
+
+.editing .view {
+  display: none;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Ensure proper styling for completed todos */
+.todo-list li.completed label {
+  color: #d9d9d9;
+  text-decoration: line-through;
+}
