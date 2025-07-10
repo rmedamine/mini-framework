@@ -1,17 +1,34 @@
 import { bindEvent } from './event.js'
+import { diffAndUpdate, getCachedTree, setCachedTree } from './diff.js'
 
+// Crée un élément virtuel (pas encore dans le DOM)
 export function el(type, props = {}) {
-  const element = document.createElement(type)
+  return {
+    type,
+    props: { ...props }
+  }
+}
+
+// Fonction pour créer un élément DOM à partir d'un élément virtuel
+function createDOMElement(virtualElement) {
+  if (typeof virtualElement === 'string') {
+    return document.createTextNode(virtualElement)
+  }
+  
+  if (virtualElement === false || virtualElement === null || virtualElement === undefined) {
+    return null
+  }
+  
+  const element = document.createElement(virtualElement.type)
+  const props = virtualElement.props || {}
 
   for (const [key, value] of Object.entries(props)) {
     if (key === 'children') {
       setChildren(element, value)
     } else if (key.startsWith('on') && typeof value === 'function') {
       const event = key.slice(2).toLowerCase()
-      bindEvent(element, event, value)    
-     // element.addEventListener(key.slice(2).toLowerCase(), value)
-
-    }else if (key === 'class') {
+      bindEvent(element, event, value)
+    } else if (key === 'class') {
       element.className = value
     } else if (key === 'checked') {
       element.checked = value
@@ -30,13 +47,25 @@ export function setChildren(parent, children = []) {
 
   for (const child of children) {
     if (child === false || child === null || child === undefined) continue
-    parent.appendChild(
-      typeof child === 'string' ? document.createTextNode(child) : child
-    )
+    const domElement = createDOMElement(child)
+    if (domElement) {
+      parent.appendChild(domElement)
+    }
   }
 }
 
-export function mount(target, node) {
-  target.innerHTML = ''
-  target.appendChild(node)
+// Nouvelle fonction mount avec diffing
+export function mount(target, virtualNode) {
+  const oldVirtualTree = getCachedTree(target)
+  
+  // Utiliser le diffing pour mettre à jour
+  diffAndUpdate(target, oldVirtualTree, virtualNode)
+  
+  // Mettre en cache le nouvel arbre virtuel
+  setCachedTree(target, virtualNode)
+}
+
+// Fonction pour créer un élément DOM directement (pour compatibilité)
+export function createElement(type, props = {}) {
+  return createDOMElement(el(type, props))
 }

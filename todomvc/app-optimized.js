@@ -1,4 +1,4 @@
-import { el, mount } from '../framework/minidom.js'
+import { vel, mountOptimized } from '../framework/minidom.js'
 import { createStore } from '../framework/store.js'
 import { initRouter, onRouteChange, getCurrentRoute } from '../framework/router.js'
 
@@ -71,17 +71,17 @@ function cancelEdit() {
   store.setState({ ...store.state, editingIndex: null })
 }
 
-// Rendering logic
+// Rendering logic avec éléments virtuels
 let inputRef = null
 
-function render() {
+function createVirtualApp() {
   const { newTodo, todos, editingIndex } = store.state
   const visibleTodos = getVisibleTodos()
   const activeCount = todos.filter(t => !t.completed).length
   const completedCount = todos.length - activeCount
   const route = getCurrentRoute()
 
-  const input = el('input', {
+  const input = vel('input', {
     class: 'new-todo',
     placeholder: 'What needs to be done?',
     value: newTodo,
@@ -98,20 +98,20 @@ function render() {
 
     // .view block
     liChildren.push(
-      el('div', {
+      vel('div', {
         class: 'view',
         children: [
-          el('input', {
+          vel('input', {
             class: 'toggle',
             type: 'checkbox',
             checked: todo.completed,
             onchange: () => toggleTodo(i)
           }),
-          el('label', {
+          vel('label', {
             ondblclick: () => startEdit(i),
             children: [todo.title]
           }),
-          el('button', {
+          vel('button', {
             class: 'destroy',
             onclick: () => deleteTodo(i)
           })
@@ -122,7 +122,7 @@ function render() {
     // input.edit field OUTSIDE .view
     if (editingIndex === i) {
       liChildren.push(
-        el('input', {
+        vel('input', {
           class: 'edit',
           value: todo.title,
           autofocus: true,
@@ -135,36 +135,37 @@ function render() {
       )
     }
 
-    return el('li', {
+    return vel('li', {
+      key: `todo-${i}`, // Clé pour optimiser le diffing
       class: `${todo.completed ? 'completed' : ''} ${editingIndex === i ? 'editing' : ''}`,
       children: liChildren
     })
   })
 
-  const view = el('section', {
+  const view = vel('section', {
     class: 'todoapp',
     children: [
-      el('header', {
+      vel('header', {
         class: 'header',
         children: [
-          el('h1', { children: ['todos'] }),
+          vel('h1', { children: ['todos'] }),
           input
         ]
       }),
 
       todos.length > 0 &&
-        el('section', {
+        vel('section', {
           class: 'main',
           children: [
-            el('input', {
+            vel('input', {
               id: 'toggle-all',
               class: 'toggle-all',
               type: 'checkbox',
               checked: activeCount === 0,
               onchange: e => toggleAll(e.target.checked)
             }),
-            el('label', { for: 'toggle-all' }),
-            el('ul', {
+            vel('label', { for: 'toggle-all' }),
+            vel('ul', {
               class: 'todo-list',
               children: todoItems
             })
@@ -172,37 +173,37 @@ function render() {
         }),
 
       todos.length > 0 &&
-        el('footer', {
+        vel('footer', {
           class: 'footer',
           children: [
-            el('span', {
+            vel('span', {
               class: 'todo-count',
               children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left`]
             }),
-            el('ul', {
+            vel('ul', {
               class: 'filters',
               children: [
-                el('li', {
+                vel('li', {
                   children: [
-                    el('a', {
+                    vel('a', {
                       href: '#/',
                       class: route === '/' ? 'selected' : '',
                       children: ['All']
                     })
                   ]
                 }),
-                el('li', {
+                vel('li', {
                   children: [
-                    el('a', {
+                    vel('a', {
                       href: '#/active',
                       class: route === '/active' ? 'selected' : '',
                       children: ['Active']
                     })
                   ]
                 }),
-                el('li', {
+                vel('li', {
                   children: [
-                    el('a', {
+                    vel('a', {
                       href: '#/completed',
                       class: route === '/completed' ? 'selected' : '',
                       children: ['Completed']
@@ -212,7 +213,7 @@ function render() {
               ]
             }),
             completedCount > 0 &&
-              el('button', {
+              vel('button', {
                 class: 'clear-completed',
                 onclick: clearCompleted,
                 children: ['Clear completed']
@@ -222,19 +223,28 @@ function render() {
     ]
   })
 
-  const app = document.getElementById('app')
-  mount(app, view)
+  return view
+}
 
-  // Focus sur l'input après le rendu
+// Fonction de rendu optimisée
+function renderOptimized() {
+  const virtualApp = createVirtualApp()
+  const app = document.getElementById('app')
+  mountOptimized(app, virtualApp)
+
+  // Focus sur l'input si il existe
   if (inputRef) {
-    inputRef.focus()
-    inputRef.setSelectionRange(inputRef.value.length, inputRef.value.length)
+    const inputElement = app.querySelector('.new-todo')
+    if (inputElement) {
+      inputElement.focus()
+      inputElement.setSelectionRange(inputElement.value.length, inputElement.value.length)
+    }
   }
 }
 
 // Watch for state and route changes
-store.subscribe(render)
-onRouteChange(render)
+store.subscribe(renderOptimized)
+onRouteChange(renderOptimized)
 initRouter()
 
-render()
+renderOptimized() 

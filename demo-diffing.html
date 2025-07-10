@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Démonstration Diffing - Mini Framework</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            background: white;
+            border: 1px solid #ddd; 
+            border-radius: 8px;
+            padding: 20px; 
+            margin: 20px 0; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .counter { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #007bff;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .list-item { 
+            padding: 10px; 
+            margin: 5px 0; 
+            background: #f8f9fa; 
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .highlight { 
+            background: #fff3cd !important; 
+            border-left-color: #ffc107 !important;
+        }
+        .stats {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .performance {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .diff-info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Démonstration du Système de Diffing</h1>
+    
+    <div class="diff-info">
+        <strong>💡 Le diffing optimise les rendus en mettant à jour uniquement les parties du DOM qui ont changé !</strong>
+        <br>Regardez la console pour voir les détails des mises à jour.
+    </div>
+    
+    <div class="container">
+        <h2>📊 Compteur avec Diffing</h2>
+        <div class="performance">
+            <strong>Performance :</strong> Seul le texte du compteur est mis à jour, pas tout le DOM !
+        </div>
+        <div id="counter-app"></div>
+        <button onclick="incrementCounter()">➕ Incrémenter</button>
+        <button onclick="decrementCounter()">➖ Décrémenter</button>
+        <button onclick="resetCounter()">🔄 Reset</button>
+    </div>
+    
+    <div class="container">
+        <h2>📝 Liste Dynamique</h2>
+        <div class="performance">
+            <strong>Performance :</strong> Ajout/suppression d'éléments sans re-rendre toute la liste !
+        </div>
+        <div id="list-app"></div>
+        <button onclick="addItem()">➕ Ajouter Item</button>
+        <button onclick="removeItem()">➖ Supprimer Item</button>
+        <button onclick="updateItems()">✏️ Mettre à jour Items</button>
+        <button onclick="highlightItems()">🌟 Surligner Items</button>
+        <button onclick="clearHighlight()">🧹 Effacer Surlignage</button>
+    </div>
+    
+    <div class="container">
+        <h2>🎯 Éléments Conditionnels</h2>
+        <div class="performance">
+            <strong>Performance :</strong> Affichage/masquage d'éléments sans re-créer le DOM !
+        </div>
+        <div id="conditional-app"></div>
+        <button onclick="toggleConditional()">🔄 Basculer Affichage</button>
+        <button onclick="changeConditional()">🔄 Changer Contenu</button>
+    </div>
+    
+    <div class="container">
+        <h2>📈 Statistiques de Performance</h2>
+        <div id="stats-app"></div>
+    </div>
+
+    <script type="module">
+        import { el, mount } from './framework/minidom.js'
+        import { createStore } from './framework/store.js'
+
+        // Stores
+        const counterStore = createStore({ count: 0 })
+        const listStore = createStore({ 
+            items: ['Item 1', 'Item 2', 'Item 3'],
+            nextId: 4,
+            highlighted: false
+        })
+        const conditionalStore = createStore({ 
+            show: true, 
+            content: 'Contenu initial' 
+        })
+        const statsStore = createStore({ 
+            renders: 0,
+            lastRender: Date.now()
+        })
+
+        // Fonction de rendu du compteur
+        function renderCounter() {
+            const { count } = counterStore.state
+            
+            const counterApp = el('div', {
+                children: [
+                    el('div', {
+                        class: 'counter',
+                        children: [`${count}`]
+                    }),
+                    el('p', {
+                        children: ['Cliquez sur les boutons pour voir le diffing en action !']
+                    })
+                ]
+            })
+            
+            mount(document.getElementById('counter-app'), counterApp)
+            updateStats()
+        }
+
+        // Fonction de rendu de la liste
+        function renderList() {
+            const { items, highlighted } = listStore.state
+            
+            const listItems = items.map((item, index) => 
+                el('div', {
+                    key: `item-${index}`,
+                    class: `list-item ${highlighted ? 'highlight' : ''}`,
+                    children: [`${index + 1}. ${item}`]
+                })
+            )
+            
+            const listApp = el('div', {
+                children: [
+                    el('h3', { children: ['Liste avec Diffing'] }),
+                    el('div', { children: listItems }),
+                    el('p', {
+                        children: [`Total: ${items.length} éléments`]
+                    })
+                ]
+            })
+            
+            mount(document.getElementById('list-app'), listApp)
+            updateStats()
+        }
+
+        // Fonction de rendu des éléments conditionnels
+        function renderConditional() {
+            const { show, content } = conditionalStore.state
+            
+            const conditionalApp = el('div', {
+                children: [
+                    el('h3', { children: ['Éléments Conditionnels'] }),
+                    show && el('div', {
+                        class: 'list-item',
+                        children: [content]
+                    }),
+                    !show && el('div', {
+                        style: 'color: #6c757d; font-style: italic;',
+                        children: ['Contenu masqué']
+                    })
+                ]
+            })
+            
+            mount(document.getElementById('conditional-app'), conditionalApp)
+            updateStats()
+        }
+
+        // Fonction de rendu des statistiques
+        function renderStats() {
+            const { renders, lastRender } = statsStore.state
+            
+            const statsApp = el('div', {
+                class: 'stats',
+                children: [
+                    el('h3', { children: ['Statistiques de Performance'] }),
+                    el('p', { children: [`Rendus effectués: ${renders}`] }),
+                    el('p', { children: [`Dernier rendu: ${new Date(lastRender).toLocaleTimeString()}`] }),
+                    el('p', { children: ['Le diffing évite les re-rendus inutiles !'] })
+                ]
+            })
+            
+            mount(document.getElementById('stats-app'), statsApp)
+        }
+
+        function updateStats() {
+            statsStore.setState({
+                renders: statsStore.state.renders + 1,
+                lastRender: Date.now()
+            })
+        }
+
+        // S'abonner aux changements
+        counterStore.subscribe(renderCounter)
+        listStore.subscribe(renderList)
+        conditionalStore.subscribe(renderConditional)
+        statsStore.subscribe(renderStats)
+
+        // Rendu initial
+        renderCounter()
+        renderList()
+        renderConditional()
+        renderStats()
+
+        // Fonctions globales pour les boutons
+        window.incrementCounter = () => {
+            console.log('🔄 Incrémentation du compteur')
+            counterStore.setState({ count: counterStore.state.count + 1 })
+        }
+        
+        window.decrementCounter = () => {
+            console.log('🔄 Décrémentation du compteur')
+            counterStore.setState({ count: counterStore.state.count - 1 })
+        }
+        
+        window.resetCounter = () => {
+            console.log('🔄 Reset du compteur')
+            counterStore.setState({ count: 0 })
+        }
+        
+        window.addItem = () => {
+            console.log('➕ Ajout d\'un item à la liste')
+            const { items, nextId } = listStore.state
+            listStore.setState({
+                items: [...items, `Nouvel Item ${nextId}`],
+                nextId: nextId + 1
+            })
+        }
+        
+        window.removeItem = () => {
+            console.log('➖ Suppression d\'un item de la liste')
+            const { items } = listStore.state
+            if (items.length > 0) {
+                listStore.setState({
+                    items: items.slice(0, -1)
+                })
+            }
+        }
+        
+        window.updateItems = () => {
+            console.log('✏️ Mise à jour des items')
+            const { items } = listStore.state
+            const updatedItems = items.map((item, index) => 
+                `${item} (mis à jour à ${new Date().toLocaleTimeString()})`
+            )
+            listStore.setState({ items: updatedItems })
+        }
+        
+        window.highlightItems = () => {
+            console.log('🌟 Surlignage des items')
+            listStore.setState({ highlighted: true })
+        }
+        
+        window.clearHighlight = () => {
+            console.log('🧹 Effacement du surlignage')
+            listStore.setState({ highlighted: false })
+        }
+        
+        window.toggleConditional = () => {
+            console.log('🔄 Basculement de l\'affichage conditionnel')
+            conditionalStore.setState({ show: !conditionalStore.state.show })
+        }
+        
+        window.changeConditional = () => {
+            console.log('🔄 Changement du contenu conditionnel')
+            conditionalStore.setState({ 
+                content: `Contenu mis à jour à ${new Date().toLocaleTimeString()}` 
+            })
+        }
+
+        // Log des performances
+        console.log('🚀 Système de diffing initialisé !')
+        console.log('💡 Le diffing optimise les rendus en mettant à jour uniquement les parties du DOM qui ont changé.')
+    </script>
+</body>
+</html> 

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Diffing - Mini Framework</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { border: 1px solid #ccc; padding: 20px; margin: 10px 0; }
+        button { margin: 5px; padding: 10px; }
+        .counter { font-size: 24px; font-weight: bold; }
+        .list-item { padding: 5px; margin: 2px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Test du Système de Diffing</h1>
+    
+    <div class="container">
+        <h2>Compteur avec Diffing</h2>
+        <div id="counter-app"></div>
+        <button onclick="incrementCounter()">Incrémenter</button>
+        <button onclick="decrementCounter()">Décrémenter</button>
+    </div>
+    
+    <div class="container">
+        <h2>Liste Dynamique</h2>
+        <div id="list-app"></div>
+        <button onclick="addItem()">Ajouter Item</button>
+        <button onclick="removeItem()">Supprimer Item</button>
+        <button onclick="updateItems()">Mettre à jour Items</button>
+    </div>
+
+    <script type="module">
+        import { el, mount } from './framework/minidom.js'
+        import { createStore } from './framework/store.js'
+
+        // Store pour le compteur
+        const counterStore = createStore({ count: 0 })
+        
+        // Store pour la liste
+        const listStore = createStore({ 
+            items: ['Item 1', 'Item 2', 'Item 3'],
+            nextId: 4
+        })
+
+        // Fonction de rendu du compteur
+        function renderCounter() {
+            const { count } = counterStore.state
+            
+            const counterApp = el('div', {
+                children: [
+                    el('div', {
+                        class: 'counter',
+                        children: [`Compteur: ${count}`]
+                    }),
+                    el('p', {
+                        children: ['Le diffing met à jour seulement le texte qui change!']
+                    })
+                ]
+            })
+            
+            mount(document.getElementById('counter-app'), counterApp)
+        }
+
+        // Fonction de rendu de la liste
+        function renderList() {
+            const { items } = listStore.state
+            
+            const listItems = items.map((item, index) => 
+                el('div', {
+                    key: `item-${index}`,
+                    class: 'list-item',
+                    children: [`${index + 1}. ${item}`]
+                })
+            )
+            
+            const listApp = el('div', {
+                children: [
+                    el('h3', { children: ['Liste Dynamique'] }),
+                    el('div', { children: listItems })
+                ]
+            })
+            
+            mount(document.getElementById('list-app'), listApp)
+        }
+
+        // S'abonner aux changements
+        counterStore.subscribe(renderCounter)
+        listStore.subscribe(renderList)
+
+        // Rendu initial
+        renderCounter()
+        renderList()
+
+        // Fonctions globales pour les boutons
+        window.incrementCounter = () => {
+            counterStore.setState({ count: counterStore.state.count + 1 })
+        }
+        
+        window.decrementCounter = () => {
+            counterStore.setState({ count: counterStore.state.count - 1 })
+        }
+        
+        window.addItem = () => {
+            const { items, nextId } = listStore.state
+            listStore.setState({
+                items: [...items, `Nouvel Item ${nextId}`],
+                nextId: nextId + 1
+            })
+        }
+        
+        window.removeItem = () => {
+            const { items } = listStore.state
+            if (items.length > 0) {
+                listStore.setState({
+                    items: items.slice(0, -1)
+                })
+            }
+        }
+        
+        window.updateItems = () => {
+            const { items } = listStore.state
+            const updatedItems = items.map((item, index) => 
+                `${item} (mis à jour)`
+            )
+            listStore.setState({ items: updatedItems })
+        }
+    </script>
+</body>
+</html> 
