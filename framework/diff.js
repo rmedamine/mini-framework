@@ -107,6 +107,9 @@ function removeProp(element, key, value) {
     element.className = ''
   } else if (key === 'checked') {
     element.checked = false
+  } else if (key === 'value') {
+    // Pour les éléments input, vider la propriété value
+    element.value = ''
   } else {
     element.removeAttribute(key)
   }
@@ -121,6 +124,9 @@ function setProp(element, key, value) {
     element.className = value
   } else if (key === 'checked') {
     element.checked = value
+  } else if (key === 'value') {
+    // Pour les éléments input, définir directement la propriété value
+    element.value = value
   } else {
     element.setAttribute(key, value)
   }
