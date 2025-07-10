@@ -1,0 +1,444 @@
+# EXPLICATION DÉTAILLÉE - app.js (TodoMVC)
+# =========================================
+
+## APPLICATION TODO MVC COMPLÈTE
+Cette application démontre l'utilisation complète du mini-framework avec tous ses composants.
+
+## IMPORTS
+import { el, mount } from '../framework/minidom.js'
+import { createStore } from '../framework/store.js'
+import { initRouter, onRouteChange, getCurrentRoute } from '../framework/router.js'
+
+LIGNE 1-3: Import des modules du framework
+- el, mount: API principale pour créer et monter des éléments
+- createStore: Système de gestion d'état
+- initRouter, onRouteChange, getCurrentRoute: Système de routage
+
+## INITIALISATION DU STORE
+const store = createStore({
+  todos: [],
+  newTodo: '',
+  editingIndex: null
+})
+
+LIGNE 5-9: Création du store avec l'état initial
+- todos: Tableau des todos
+- newTodo: Texte en cours de saisie
+- editingIndex: Index du todo en cours d'édition (null si aucun)
+
+## ACTIONS - FONCTIONS PURES
+============================
+
+### FONCTION addTodo() - Ajout d'un todo
+function addTodo(title) {
+  const trimmed = title.trim()
+  if (!trimmed) return
+  store.setState({
+    ...store.state,
+    todos: [...store.state.todos, { title: trimmed, completed: false }],
+    newTodo: ''
+  })
+}
+
+LIGNE 12-19: Fonction pour ajouter un nouveau todo
+- LIGNE 13: Supprimer les espaces en début/fin
+- LIGNE 14: Si vide après trim, ne rien faire
+- LIGNE 15-18: Mettre à jour le store avec le nouveau todo et vider l'input
+
+### FONCTION deleteTodo() - Suppression d'un todo
+function deleteTodo(index) {
+  const todos = [...store.state.todos]
+  todos.splice(index, 1)
+  store.setState({ ...store.state, todos })
+}
+
+LIGNE 21-26: Fonction pour supprimer un todo
+- LIGNE 22: Copier le tableau des todos
+- LIGNE 23: Supprimer l'élément à l'index spécifié
+- LIGNE 24: Mettre à jour le store
+
+### FONCTION toggleTodo() - Basculer l'état d'un todo
+function toggleTodo(index) {
+  const todos = [...store.state.todos]
+  todos[index].completed = !todos[index].completed
+  store.setState({ ...store.state, todos })
+}
+
+LIGNE 28-33: Fonction pour basculer l'état completed d'un todo
+- LIGNE 29: Copier le tableau des todos
+- LIGNE 30: Inverser l'état completed du todo à l'index
+- LIGNE 31: Mettre à jour le store
+
+### FONCTION toggleAll() - Basculer tous les todos
+function toggleAll(completed) {
+  const todos = store.state.todos.map(todo => ({ ...todo, completed }))
+  store.setState({ ...store.state, todos })
+}
+
+LIGNE 35-39: Fonction pour basculer tous les todos
+- LIGNE 36: Créer un nouveau tableau avec tous les todos modifiés
+- LIGNE 37: Mettre à jour le store
+
+### FONCTION clearCompleted() - Supprimer les todos complétés
+function clearCompleted() {
+  const todos = store.state.todos.filter(todo => !todo.completed)
+  store.setState({ ...store.state, todos })
+}
+
+LIGNE 41-44: Fonction pour supprimer tous les todos complétés
+- LIGNE 42: Filtrer pour garder seulement les todos non complétés
+- LIGNE 43: Mettre à jour le store
+
+## LOGIQUE DE ROUTAGE
+=====================
+
+### FONCTION getVisibleTodos() - Filtrage selon la route
+function getVisibleTodos() {
+  const { todos } = store.state
+  const route = getCurrentRoute()
+  if (route === '/active') return todos.filter(t => !t.completed)
+  if (route === '/completed') return todos.filter(t => t.completed)
+  return todos
+}
+
+LIGNE 47-52: Fonction pour filtrer les todos selon la route actuelle
+- LIGNE 48: Récupérer les todos du store
+- LIGNE 49: Récupérer la route actuelle
+- LIGNE 50: Si route '/active', retourner seulement les todos non complétés
+- LIGNE 51: Si route '/completed', retourner seulement les todos complétés
+- LIGNE 52: Sinon (route '/'), retourner tous les todos
+
+## LOGIQUE D'ÉDITION
+====================
+
+### FONCTION startEdit() - Commencer l'édition
+function startEdit(index) {
+  store.setState({ ...store.state, editingIndex: index })
+}
+
+LIGNE 55-57: Fonction pour commencer l'édition d'un todo
+- LIGNE 56: Mettre à jour editingIndex avec l'index du todo
+
+### FONCTION finishEdit() - Terminer l'édition
+function finishEdit(index, value) {
+  const title = value.trim()
+  if (!title) {
+    deleteTodo(index)
+    return
+  }
+  const todos = [...store.state.todos]
+  todos[index].title = title
+  store.setState({ ...store.state, todos, editingIndex: null })
+}
+
+LIGNE 59-68: Fonction pour terminer l'édition d'un todo
+- LIGNE 60: Supprimer les espaces en début/fin
+- LIGNE 61-64: Si vide, supprimer le todo
+- LIGNE 65-67: Sinon, mettre à jour le titre et arrêter l'édition
+
+### FONCTION cancelEdit() - Annuler l'édition
+function cancelEdit() {
+  store.setState({ ...store.state, editingIndex: null })
+}
+
+LIGNE 70-72: Fonction pour annuler l'édition
+- LIGNE 71: Remettre editingIndex à null
+
+## LOGIQUE DE RENDU
+===================
+
+### VARIABLE GLOBALE
+let inputRef = null
+
+LIGNE 75: Variable pour garder une référence à l'input principal
+
+### FONCTION render() - Rendu principal
+function render() {
+  const { newTodo, todos, editingIndex } = store.state
+  const visibleTodos = getVisibleTodos()
+  const activeCount = todos.filter(t => !t.completed).length
+  const completedCount = todos.length - activeCount
+  const route = getCurrentRoute()
+
+LIGNE 78-83: Début de la fonction de rendu principal
+- LIGNE 79: Destructurer l'état du store
+- LIGNE 80: Récupérer les todos visibles selon la route
+- LIGNE 81: Compter les todos actifs (non complétés)
+- LIGNE 82: Compter les todos complétés
+- LIGNE 83: Récupérer la route actuelle
+
+### CRÉATION DE L'INPUT PRINCIPAL
+  const input = el('input', {
+    class: 'new-todo',
+    placeholder: 'What needs to be done?',
+    value: newTodo,
+    oninput: e => store.setState({ ...store.state, newTodo: e.target.value }),
+    onkeydown: e => {
+      if (e.key === 'Enter') addTodo(store.state.newTodo)
+    }
+  })
+
+  inputRef = input
+
+LIGNE 85-94: Création de l'input pour ajouter de nouveaux todos
+- LIGNE 85-93: Créer l'élément input avec ses propriétés
+- LIGNE 86: Classe CSS
+- LIGNE 87: Placeholder
+- LIGNE 88: Valeur liée à l'état
+- LIGNE 89: Événement input pour mettre à jour newTodo
+- LIGNE 90-92: Événement keydown pour ajouter sur Enter
+- LIGNE 94: Garder une référence pour le focus
+
+### CRÉATION DES ÉLÉMENTS TODO
+  const todoItems = visibleTodos.map((todo, i) => {
+    const liChildren = []
+
+    // .view block
+    liChildren.push(
+      el('div', {
+        class: 'view',
+        children: [
+          el('input', {
+            class: 'toggle',
+            type: 'checkbox',
+            checked: todo.completed,
+            onchange: () => toggleTodo(i)
+          }),
+          el('label', {
+            ondblclick: () => startEdit(i),
+            children: [todo.title]
+          }),
+          el('button', {
+            class: 'destroy',
+            onclick: () => deleteTodo(i)
+          })
+        ]
+      })
+    )
+
+LIGNE 96-118: Création des éléments todo
+- LIGNE 96: Mapper les todos visibles
+- LIGNE 97: Tableau pour les enfants du li
+- LIGNE 100-117: Créer le bloc .view avec checkbox, label et bouton
+- LIGNE 102-107: Checkbox pour basculer l'état
+- LIGNE 108-111: Label avec double-clic pour éditer
+- LIGNE 112-115: Bouton pour supprimer
+
+    // input.edit field OUTSIDE .view
+    if (editingIndex === i) {
+      liChildren.push(
+        el('input', {
+          class: 'edit',
+          value: todo.title,
+          autofocus: true,
+          onblur: e => finishEdit(i, e.target.value),
+          onkeydown: e => {
+            if (e.key === 'Enter') finishEdit(i, e.target.value)
+            if (e.key === 'Escape') cancelEdit()
+          }
+        })
+      )
+    }
+
+LIGNE 120-133: Ajout de l'input d'édition si nécessaire
+- LIGNE 121: Si ce todo est en cours d'édition
+- LIGNE 122-132: Créer l'input d'édition
+- LIGNE 123-131: Propriétés de l'input d'édition
+- LIGNE 124: Classe CSS
+- LIGNE 125: Valeur actuelle du todo
+- LIGNE 126: Focus automatique
+- LIGNE 127: Événement blur pour terminer l'édition
+- LIGNE 128-131: Événements clavier (Enter pour valider, Escape pour annuler)
+
+    return el('li', {
+      class: `${todo.completed ? 'completed' : ''} ${editingIndex === i ? 'editing' : ''}`,
+      children: liChildren
+    })
+  })
+
+LIGNE 135-139: Retourner l'élément li pour chaque todo
+- LIGNE 136-137: Classes conditionnelles (completed et editing)
+- LIGNE 138: Enfants créés précédemment
+
+### CRÉATION DE L'INTERFACE PRINCIPALE
+  const view = el('section', {
+    class: 'todoapp',
+    children: [
+      el('header', {
+        class: 'header',
+        children: [
+          el('h1', { children: ['todos'] }),
+          input
+        ]
+      }),
+
+LIGNE 141-150: Création de la section principale
+- LIGNE 141-149: Section todoapp
+- LIGNE 142-148: Header avec titre et input
+
+      todos.length > 0 &&
+        el('section', {
+          class: 'main',
+          children: [
+            el('input', {
+              id: 'toggle-all',
+              class: 'toggle-all',
+              type: 'checkbox',
+              checked: activeCount === 0,
+              onchange: e => toggleAll(e.target.checked)
+            }),
+            el('label', { for: 'toggle-all' }),
+            el('ul', {
+              class: 'todo-list',
+              children: todoItems
+            })
+          ]
+        }),
+
+LIGNE 152-168: Section principale (seulement si il y a des todos)
+- LIGNE 152: Condition pour afficher seulement si il y a des todos
+- LIGNE 153-167: Section main
+- LIGNE 154-160: Checkbox "toggle all"
+- LIGNE 161: Label pour la checkbox
+- LIGNE 162-166: Liste des todos
+
+      todos.length > 0 &&
+        el('footer', {
+          class: 'footer',
+          children: [
+            el('span', {
+              class: 'todo-count',
+              children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left`]
+            }),
+            el('ul', {
+              class: 'filters',
+              children: [
+                el('li', {
+                  children: [
+                    el('a', {
+                      href: '#/',
+                      class: route === '/' ? 'selected' : '',
+                      children: ['All']
+                    })
+                  ]
+                }),
+                el('li', {
+                  children: [
+                    el('a', {
+                      href: '#/active',
+                      class: route === '/active' ? 'selected' : '',
+                      children: ['Active']
+                    })
+                  ]
+                }),
+                el('li', {
+                  children: [
+                    el('a', {
+                      href: '#/completed',
+                      class: route === '/completed' ? 'selected' : '',
+                      children: ['Completed']
+                    })
+                  ]
+                })
+              ]
+            }),
+            completedCount > 0 &&
+              el('button', {
+                class: 'clear-completed',
+                onclick: clearCompleted,
+                children: ['Clear completed']
+              })
+          ]
+        })
+    ]
+  })
+
+LIGNE 170-218: Footer avec compteurs et filtres
+- LIGNE 170: Condition pour afficher seulement si il y a des todos
+- LIGNE 171-217: Footer
+- LIGNE 172-175: Compteur de todos actifs
+- LIGNE 176-207: Filtres de navigation
+- LIGNE 208-213: Bouton "Clear completed" (seulement si il y a des todos complétés)
+
+### MONTAGE ET FOCUS
+  const app = document.getElementById('app')
+  mount(app, view)
+
+  // Focus sur l'input après le rendu
+  if (inputRef) {
+    inputRef.focus()
+    inputRef.setSelectionRange(inputRef.value.length, inputRef.value.length)
+  }
+}
+
+LIGNE 220-227: Montage de l'application
+- LIGNE 221: Récupérer l'élément DOM cible
+- LIGNE 222: Monter l'arbre virtuel
+- LIGNE 225-227: Focus sur l'input et positionner le curseur à la fin
+
+## CONFIGURATION DES ÉCOUTEURS
+==============================
+
+// Watch for state and route changes
+store.subscribe(render)
+onRouteChange(render)
+initRouter()
+
+render()
+
+LIGNE 230-234: Configuration des écouteurs et initialisation
+- LIGNE 230: S'abonner aux changements d'état du store
+- LIGNE 231: S'abonner aux changements de route
+- LIGNE 232: Initialiser le routeur
+- LIGNE 234: Premier rendu de l'application
+
+## FONCTIONNEMENT COMPLET
+==========================
+
+### 1. INITIALISATION
+- Store créé avec état initial
+- Routeur initialisé
+- Écouteurs configurés
+- Premier rendu effectué
+
+### 2. CYCLE DE VIE
+1. **ACTION UTILISATEUR** (clic, saisie, etc.)
+2. **MISE À JOUR DU STORE** (setState)
+3. **NOTIFICATION** (subscribe)
+4. **RE-RENDU** (render)
+5. **DIFFING** (mount)
+6. **MISE À JOUR DOM** (optimisée)
+
+### 3. ROUTAGE
+- Changement de hash → handleHashChange()
+- Notification des listeners → render()
+- Filtrage des todos selon la route
+
+### 4. ÉDITION
+- Double-clic → startEdit()
+- Saisie → mise à jour en temps réel
+- Enter/Escape/Blur → finishEdit()/cancelEdit()
+
+## AVANTAGES DE CETTE ARCHITECTURE
+==================================
+
+### 1. SÉPARATION DES RESPONSABILITÉS
+- **Actions**: Logique métier pure
+- **Store**: Gestion d'état centralisée
+- **Router**: Navigation
+- **Render**: Interface utilisateur
+
+### 2. RÉACTIVITÉ
+- Changements d'état → re-rendu automatique
+- Changements de route → re-rendu automatique
+- Pas de manipulation manuelle du DOM
+
+### 3. PERFORMANCE
+- Diffing optimise les mises à jour
+- Seules les parties changées sont mises à jour
+- Pas de re-rendu complet
+
+### 4. MAINTENABILITÉ
+- Code modulaire et réutilisable
+- Actions testables indépendamment
+- État prévisible et centralisé 

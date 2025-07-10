@@ -1,0 +1,155 @@
+# EXPLICATION DÉTAILLÉE - minidom.js
+# ======================================
+
+## IMPORTS
+import { bindEvent } from './event.js'
+import { diffAndUpdate, getCachedTree, setCachedTree } from './diff.js'
+
+LIGNE 1-2: Import des fonctions nécessaires
+- bindEvent: Pour attacher des événements aux éléments DOM
+- diffAndUpdate: Fonction principale du système de diffing
+- getCachedTree/setCachedTree: Pour gérer le cache des arbres virtuels
+
+## FONCTION el() - Création d'éléments virtuels
+export function el(type, props = {}) {
+  return {
+    type,
+    props: { ...props }
+  }
+}
+
+LIGNE 5-9: Fonction principale pour créer des éléments virtuels
+- type: Le type d'élément HTML ('div', 'span', 'button', etc.)
+- props: Objet contenant les propriétés (classe, événements, enfants, etc.)
+- Retourne un objet virtuel qui n'est PAS encore dans le DOM
+- Utilisation: el('div', { class: 'container', children: ['Hello'] })
+
+## FONCTION createDOMElement() - Conversion virtuel vers DOM
+function createDOMElement(virtualElement) {
+  if (typeof virtualElement === 'string') {
+    return document.createTextNode(virtualElement)
+  }
+  
+  if (virtualElement === false || virtualElement === null || virtualElement === undefined) {
+    return null
+  }
+  
+  const element = document.createElement(virtualElement.type)
+  const props = virtualElement.props || {}
+
+LIGNE 12-25: Fonction interne pour convertir un élément virtuel en élément DOM réel
+- LIGNE 13-15: Si c'est une chaîne, créer un nœud texte
+- LIGNE 17-19: Si c'est falsy, retourner null (pour les éléments conditionnels)
+- LIGNE 21-23: Créer l'élément DOM et récupérer ses propriétés
+
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'children') {
+      setChildren(element, value)
+    } else if (key.startsWith('on') && typeof value === 'function') {
+      const event = key.slice(2).toLowerCase()
+      bindEvent(element, event, value)
+    } else if (key === 'class') {
+      element.className = value
+    } else if (key === 'checked') {
+      element.checked = value
+    } else {
+      element.setAttribute(key, value)
+    }
+  }
+
+LIGNE 25-39: Application des propriétés à l'élément DOM
+- LIGNE 26-28: Si c'est 'children', utiliser setChildren pour les enfants
+- LIGNE 29-32: Si c'est un événement (commence par 'on'), l'attacher
+- LIGNE 33-35: Si c'est 'class', définir className
+- LIGNE 36-38: Si c'est 'checked', définir la propriété checked
+- LIGNE 39-41: Sinon, utiliser setAttribute pour les autres propriétés
+
+  return element
+}
+
+LIGNE 43: Retourner l'élément DOM créé
+
+## FONCTION setChildren() - Gestion des enfants
+export function setChildren(parent, children = []) {
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild)
+  }
+
+LIGNE 46-50: Fonction pour définir les enfants d'un élément
+- LIGNE 47-49: Supprimer tous les enfants existants
+
+  for (const child of children) {
+    if (child === false || child === null || child === undefined) continue
+    const domElement = createDOMElement(child)
+    if (domElement) {
+      parent.appendChild(domElement)
+    }
+  }
+}
+
+LIGNE 52-59: Ajout des nouveaux enfants
+- LIGNE 53: Ignorer les éléments conditionnels (false, null, undefined)
+- LIGNE 54: Convertir l'enfant virtuel en élément DOM
+- LIGNE 55-57: Ajouter l'élément au parent s'il existe
+
+## FONCTION mount() - Montage avec diffing
+export function mount(target, virtualNode) {
+  const oldVirtualTree = getCachedTree(target)
+  
+  // Utiliser le diffing pour mettre à jour
+  diffAndUpdate(target, oldVirtualTree, virtualNode)
+  
+  // Mettre en cache le nouvel arbre virtuel
+  setCachedTree(target, virtualNode)
+}
+
+LIGNE 62-69: Fonction principale pour monter un élément virtuel dans le DOM
+- LIGNE 63: Récupérer l'ancien arbre virtuel depuis le cache
+- LIGNE 66: Utiliser le diffing pour mettre à jour efficacement
+- LIGNE 69: Mettre en cache le nouvel arbre pour la prochaine comparaison
+
+## FONCTION createElement() - Compatibilité
+export function createElement(type, props = {}) {
+  return createDOMElement(el(type, props))
+}
+
+LIGNE 72: Fonction de compatibilité qui combine el() et createDOMElement()
+- Utilisation: createElement('div', { class: 'test' }) retourne directement un élément DOM
+
+## UTILISATION PRATIQUE
+=====================
+
+1. CRÉATION D'UN ÉLÉMENT SIMPLE:
+   const button = el('button', { 
+     onclick: () => alert('Hello'),
+     children: ['Cliquez-moi']
+   })
+
+2. CRÉATION D'UNE HIÉRARCHIE:
+   const app = el('div', {
+     class: 'container',
+     children: [
+       el('h1', { children: ['Titre'] }),
+       el('p', { children: ['Paragraphe'] })
+     ]
+   })
+
+3. MONTAGE DANS LE DOM:
+   mount(document.getElementById('app'), app)
+
+4. ÉLÉMENTS CONDITIONNELS:
+   const view = el('div', {
+     children: [
+       show && el('div', { children: ['Visible'] }),
+       !show && el('div', { children: ['Masqué'] })
+     ]
+   })
+
+## AVANTAGES DU SYSTÈME
+======================
+
+1. PERFORMANCE: Le diffing évite les re-rendus complets
+2. SIMPLICITÉ: API simple et intuitive
+3. FLEXIBILITÉ: Gestion automatique des éléments conditionnels
+4. RÉACTIVITÉ: Intégration facile avec le système de store
+5. LÉGÈRETÉ: Framework minimal mais complet 

@@ -1,0 +1,209 @@
+# EXPLICATION DÉTAILLÉE - event.js
+# =================================
+
+## SYSTÈME DE GESTION D'ÉVÉNEMENTS
+Le système d'événements permet d'attacher plusieurs handlers à un même événement sur un élément.
+
+## REGISTRY D'ÉVÉNEMENTS
+const eventRegistry = new WeakMap()
+
+LIGNE 1: Cache global pour stocker les événements de chaque élément
+- WeakMap: Permet au garbage collector de nettoyer automatiquement
+- Clé: élément DOM, Valeur: objet contenant les événements
+
+## FONCTION bindEvent() - Attachement d'événements
+export function bindEvent(element, event, handler) {
+  // Get the list of events for this element
+  let events = eventRegistry.get(element)
+  if (!events) {
+    events = {}
+    eventRegistry.set(element, events)
+  }
+
+LIGNE 4-10: Fonction principale pour attacher un événement
+- LIGNE 5-6: Récupérer la liste des événements pour cet élément
+- LIGNE 7-10: Si pas d'événements, créer un objet vide et le stocker
+
+  if (!events[event]) {
+    events[event] = []
+
+    // Assign native handler once
+    element[`on${event}`] = (e) => {
+      for (const fn of events[event]) {
+        fn(e)
+      }
+    }
+  }
+
+LIGNE 12-20: Création du handler natif
+- LIGNE 12: Si cet événement n'existe pas encore
+- LIGNE 13: Créer un tableau vide pour cet événement
+- LIGNE 15-19: Créer le handler natif qui appelle tous les handlers enregistrés
+- LIGNE 16-18: Boucle sur tous les handlers pour cet événement
+
+  // Add new handler
+  events[event].push(handler)
+}
+
+LIGNE 22-24: Ajout du nouveau handler
+- LIGNE 23: Ajouter le handler à la liste des handlers pour cet événement
+
+## COMMENT ÇA FONCTIONNE
+========================
+
+### 1. PREMIER HANDLER
+```javascript
+bindEvent(button, 'click', () => console.log('Handler 1'))
+```
+- Crée: events = { click: [handler1] }
+- Attache: button.onclick = (e) => handler1(e)
+
+### 2. DEUXIÈME HANDLER
+```javascript
+bindEvent(button, 'click', () => console.log('Handler 2'))
+```
+- Ajoute: events = { click: [handler1, handler2] }
+- Le handler natif reste le même mais appelle maintenant les 2 handlers
+
+### 3. EXÉCUTION
+Quand on clique sur le bouton:
+1. Le handler natif est appelé
+2. Il boucle sur [handler1, handler2]
+3. Chaque handler est exécuté avec l'événement
+
+## AVANTAGES DU SYSTÈME
+========================
+
+### 1. MULTIPLES HANDLERS
+```javascript
+// Plusieurs handlers pour le même événement
+bindEvent(button, 'click', () => console.log('Click 1'))
+bindEvent(button, 'click', () => console.log('Click 2'))
+bindEvent(button, 'click', () => console.log('Click 3'))
+// Tous les 3 sont exécutés lors du clic
+```
+
+### 2. GESTION AUTOMATIQUE DE LA MÉMOIRE
+- WeakMap permet au garbage collector de nettoyer automatiquement
+- Quand l'élément DOM est supprimé, les événements sont automatiquement nettoyés
+
+### 3. PERFORMANCE
+- Le handler natif n'est créé qu'une seule fois par événement
+- Les handlers suivants sont juste ajoutés au tableau
+
+## UTILISATION DANS LE FRAMEWORK
+================================
+
+### DANS minidom.js
+```javascript
+// LIGNE 29-32 de minidom.js
+} else if (key.startsWith('on') && typeof value === 'function') {
+  const event = key.slice(2).toLowerCase()
+  bindEvent(element, event, value)
+}
+```
+
+### EXEMPLE PRATIQUE
+```javascript
+const button = el('button', {
+  onclick: () => alert('Click 1'),
+  children: ['Cliquez-moi']
+})
+
+// Plus tard, on peut ajouter d'autres handlers
+bindEvent(button, 'click', () => alert('Click 2'))
+```
+
+## COMPARAISON AVEC LES ÉVÉNEMENTS NATIFS
+==========================================
+
+### AVANT (événements natifs)
+```javascript
+// Problème: le deuxième handler écrase le premier
+button.onclick = () => console.log('Handler 1')
+button.onclick = () => console.log('Handler 2') // Écrase le premier!
+```
+
+### APRÈS (avec notre système)
+```javascript
+// Solution: les deux handlers sont conservés
+bindEvent(button, 'click', () => console.log('Handler 1'))
+bindEvent(button, 'click', () => console.log('Handler 2')) // Les deux fonctionnent!
+```
+
+## EXEMPLE COMPLET
+==================
+
+```javascript
+// Création d'un bouton avec plusieurs handlers
+const button = el('button', {
+  onclick: () => console.log('Handler initial'),
+  children: ['Mon Bouton']
+})
+
+// Ajout de handlers supplémentaires
+bindEvent(button, 'click', () => console.log('Handler ajouté 1'))
+bindEvent(button, 'click', () => console.log('Handler ajouté 2'))
+
+// Ajout d'un autre type d'événement
+bindEvent(button, 'mouseover', () => console.log('Souris dessus'))
+
+// Résultat lors du clic:
+// "Handler initial"
+// "Handler ajouté 1"
+// "Handler ajouté 2"
+```
+
+## LIMITATIONS ET AMÉLIORATIONS POSSIBLES
+==========================================
+
+### LIMITATIONS ACTUELLES
+1. Pas de suppression de handlers individuels
+2. Pas de gestion des événements avec options (capture, once, etc.)
+3. Pas de gestion des événements personnalisés
+
+### AMÉLIORATIONS POSSIBLES
+```javascript
+// Ajouter une fonction pour supprimer un handler
+export function unbindEvent(element, event, handler) {
+  const events = eventRegistry.get(element)
+  if (events && events[event]) {
+    const index = events[event].indexOf(handler)
+    if (index > -1) {
+      events[event].splice(index, 1)
+    }
+  }
+}
+
+// Ajouter une fonction pour supprimer tous les handlers
+export function unbindAllEvents(element) {
+  eventRegistry.delete(element)
+}
+```
+
+## INTÉGRATION AVEC LE DIFFING
+==============================
+
+Le système d'événements s'intègre parfaitement avec le diffing:
+
+1. **PREMIER RENDU**: Les événements sont attachés via bindEvent()
+2. **MISE À JOUR**: Le diffing détecte les changements d'événements
+3. **SUPPRESSION**: Les anciens événements sont automatiquement nettoyés
+4. **AJOUT**: Les nouveaux événements sont attachés
+
+### EXEMPLE AVEC DIFFING
+```javascript
+// Premier rendu
+const button = el('button', {
+  onclick: () => console.log('Premier handler'),
+  children: ['Cliquez']
+})
+
+// Deuxième rendu (mise à jour)
+const button = el('button', {
+  onclick: () => console.log('Nouveau handler'), // Remplace l'ancien
+  children: ['Cliquez']
+})
+
+// Le diffing détecte le changement d'événement et met à jour
+``` 

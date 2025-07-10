@@ -1,0 +1,397 @@
+# EXPLICATION DÉTAILLÉE - store.js
+# =================================
+
+## SYSTÈME DE GESTION D'ÉTAT GLOBAL
+Le store est un pattern pour gérer l'état global de l'application avec un système de notifications.
+
+## FONCTION createStore() - Création d'un store
+export function createStore(initialState) {
+  let state = initialState
+  const listeners = []
+
+LIGNE 1-4: Fonction factory pour créer un store
+- LIGNE 1: Fonction exportée qui prend l'état initial
+- LIGNE 2: Variable privée pour stocker l'état actuel
+- LIGNE 3: Tableau des fonctions à appeler lors des changements d'état
+
+## FONCTION getState() - Récupération de l'état
+  function getState() {
+    return state
+  }
+
+LIGNE 5-7: Fonction interne pour récupérer l'état actuel
+- LIGNE 6: Retourner l'état stocké en mémoire
+
+## FONCTION setState() - Mise à jour de l'état
+  function setState(newState) {
+    state = newState
+    listeners.forEach(fn => fn(state))
+  }
+
+LIGNE 9-12: Fonction pour mettre à jour l'état
+- LIGNE 10: Remplacer l'ancien état par le nouveau
+- LIGNE 11: Notifier tous les listeners avec le nouvel état
+
+## FONCTION subscribe() - Abonnement aux changements
+  function subscribe(fn) {
+    listeners.push(fn)
+    fn(state)
+  }
+
+LIGNE 14-17: Fonction pour s'abonner aux changements d'état
+- LIGNE 15: Ajouter la fonction au tableau des listeners
+- LIGNE 16: Appeler immédiatement la fonction avec l'état actuel
+
+## RETOUR DE L'OBJET STORE
+  return {
+    get state() {
+      return state
+    },
+    setState,
+    subscribe
+  }
+}
+
+LIGNE 19-26: Retourner l'objet store avec ses méthodes
+- LIGNE 20-22: Getter pour accéder à l'état (store.state)
+- LIGNE 23: Méthode pour mettre à jour l'état (store.setState())
+- LIGNE 24: Méthode pour s'abonner (store.subscribe())
+
+## COMMENT ÇA FONCTIONNE
+========================
+
+### 1. CRÉATION DU STORE
+```javascript
+const store = createStore({
+  todos: [],
+  count: 0,
+  user: null
+})
+```
+
+### 2. ABONNEMENT AUX CHANGEMENTS
+```javascript
+store.subscribe((state) => {
+  console.log('État mis à jour:', state)
+  render() // Re-rendre l'application
+})
+```
+
+### 3. MISE À JOUR DE L'ÉTAT
+```javascript
+store.setState({
+  todos: [...store.state.todos, newTodo],
+  count: store.state.count + 1
+})
+```
+
+### 4. NOTIFICATION AUTOMATIQUE
+```javascript
+// Tous les listeners sont appelés automatiquement
+// avec le nouvel état
+```
+
+## EXEMPLE D'UTILISATION COMPLET
+================================
+
+### 1. CRÉATION ET CONFIGURATION
+```javascript
+// Créer le store
+const store = createStore({
+  todos: [],
+  newTodo: '',
+  editingIndex: null
+})
+
+// S'abonner aux changements
+store.subscribe(render)
+```
+
+### 2. ACTIONS (FONCTIONS PURES)
+```javascript
+function addTodo(title) {
+  const trimmed = title.trim()
+  if (!trimmed) return
+  
+  store.setState({
+    ...store.state,
+    todos: [...store.state.todos, { title: trimmed, completed: false }],
+    newTodo: ''
+  })
+}
+
+function deleteTodo(index) {
+  const todos = [...store.state.todos]
+  todos.splice(index, 1)
+  store.setState({ ...store.state, todos })
+}
+
+function toggleTodo(index) {
+  const todos = [...store.state.todos]
+  todos[index].completed = !todos[index].completed
+  store.setState({ ...store.state, todos })
+}
+```
+
+### 3. UTILISATION DANS LE RENDU
+```javascript
+function render() {
+  const { todos, newTodo, editingIndex } = store.state
+  
+  // Utiliser l'état pour créer l'interface
+  const todoItems = todos.map((todo, i) => 
+    el('li', {
+      children: [todo.title]
+    })
+  )
+  
+  mount(app, todoItems)
+}
+```
+
+## AVANTAGES DU PATTERN STORE
+=============================
+
+### 1. ÉTAT CENTRALISÉ
+```javascript
+// Un seul point de vérité pour l'état
+const store = createStore({
+  user: { name: 'John' },
+  todos: [],
+  settings: { theme: 'dark' }
+})
+```
+
+### 2. RÉACTIVITÉ AUTOMATIQUE
+```javascript
+// L'interface se met à jour automatiquement
+store.subscribe(render)
+store.setState(newState) // → render() est appelée automatiquement
+```
+
+### 3. ACTIONS PRÉVISIBLES
+```javascript
+// Chaque action suit le même pattern
+function actionName() {
+  const newState = { ...store.state }
+  // Modifier newState
+  store.setState(newState)
+}
+```
+
+### 4. DÉBOGAGE FACILE
+```javascript
+// Ajouter des logs pour débugger
+store.subscribe((state) => {
+  console.log('État:', state)
+  render()
+})
+```
+
+## COMPARAISON AVEC D'AUTRES PATTERNS
+=====================================
+
+### AVANT (variables globales)
+```javascript
+// Problème: pas de notifications automatiques
+let todos = []
+let count = 0
+
+function addTodo() {
+  todos.push(newTodo)
+  // Il faut manuellement appeler render()
+  render()
+}
+```
+
+### APRÈS (avec store)
+```javascript
+// Solution: notifications automatiques
+const store = createStore({ todos: [], count: 0 })
+
+function addTodo() {
+  store.setState({
+    ...store.state,
+    todos: [...store.state.todos, newTodo]
+  })
+  // render() est appelée automatiquement
+}
+```
+
+## INTÉGRATION AVEC LE DIFFING
+==============================
+
+Le store s'intègre parfaitement avec le système de diffing :
+
+```javascript
+// Store avec état complexe
+const store = createStore({
+  todos: [
+    { id: 1, title: 'Todo 1', completed: false },
+    { id: 2, title: 'Todo 2', completed: true }
+  ]
+})
+
+// Re-rendu optimisé
+store.subscribe(() => {
+  const newTree = createVirtualTree(store.state)
+  mount(app, newTree) // Le diffing optimise les mises à jour
+})
+```
+
+## EXEMPLE AVANCÉ - STORE AVEC ACTIONS
+======================================
+
+```javascript
+// Store avec actions intégrées
+function createAdvancedStore(initialState) {
+  let state = initialState
+  const listeners = []
+
+  const actions = {
+    addTodo: (title) => {
+      const trimmed = title.trim()
+      if (!trimmed) return
+      
+      setState({
+        ...state,
+        todos: [...state.todos, { title: trimmed, completed: false }]
+      })
+    },
+    
+    deleteTodo: (index) => {
+      const todos = [...state.todos]
+      todos.splice(index, 1)
+      setState({ ...state, todos })
+    },
+    
+    toggleTodo: (index) => {
+      const todos = [...state.todos]
+      todos[index].completed = !todos[index].completed
+      setState({ ...state, todos })
+    }
+  }
+
+  function setState(newState) {
+    state = newState
+    listeners.forEach(fn => fn(state))
+  }
+
+  return {
+    get state() { return state },
+    setState,
+    subscribe: (fn) => {
+      listeners.push(fn)
+      fn(state)
+    },
+    actions
+  }
+}
+
+// Utilisation
+const store = createAdvancedStore({ todos: [] })
+store.actions.addTodo('Nouveau todo')
+```
+
+## GESTION DES PERFORMANCES
+===========================
+
+### OPTIMISATION DES RENDU
+```javascript
+// Éviter les re-rendus inutiles
+let lastState = null
+
+store.subscribe((state) => {
+  // Comparer avec l'état précédent
+  if (JSON.stringify(state) !== JSON.stringify(lastState)) {
+    render()
+    lastState = JSON.parse(JSON.stringify(state))
+  }
+})
+```
+
+### DÉSABONNEMENT
+```javascript
+// Pour éviter les fuites mémoire
+function createComponent() {
+  const unsubscribe = store.subscribe(render)
+  
+  // Plus tard, quand le composant est détruit
+  return {
+    destroy: () => unsubscribe()
+  }
+}
+```
+
+## TESTS ET DÉBOGAGE
+====================
+
+### TESTS DU STORE
+```javascript
+// Test des actions
+const store = createStore({ count: 0 })
+
+store.subscribe((state) => {
+  console.log('État:', state)
+})
+
+store.setState({ count: 1 }) // Devrait afficher: État: { count: 1 }
+```
+
+### LOGS DE DÉBOGAGE
+```javascript
+// Ajouter des logs pour débugger
+function createStoreWithLogs(initialState) {
+  const store = createStore(initialState)
+  
+  // Wrapper pour logger les changements
+  const originalSetState = store.setState
+  store.setState = (newState) => {
+    console.log('État précédent:', store.state)
+    console.log('Nouvel état:', newState)
+    originalSetState(newState)
+  }
+  
+  return store
+}
+```
+
+## LIMITATIONS ET AMÉLIORATIONS
+===============================
+
+### LIMITATIONS ACTUELLES
+1. Pas de gestion des middlewares
+2. Pas de gestion des actions asynchrones
+3. Pas de gestion des sous-stores
+4. Pas de validation d'état
+
+### AMÉLIORATIONS POSSIBLES
+```javascript
+// Ajouter des middlewares
+function createStoreWithMiddleware(initialState, middlewares = []) {
+  const store = createStore(initialState)
+  
+  // Appliquer les middlewares
+  middlewares.forEach(middleware => {
+    store.setState = middleware(store.setState)
+  })
+  
+  return store
+}
+
+// Ajouter la validation d'état
+function createStoreWithValidation(initialState, validator) {
+  const store = createStore(initialState)
+  
+  const originalSetState = store.setState
+  store.setState = (newState) => {
+    if (validator(newState)) {
+      originalSetState(newState)
+    } else {
+      console.error('État invalide:', newState)
+    }
+  }
+  
+  return store
+}
+``` 
