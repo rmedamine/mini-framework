@@ -27,8 +27,9 @@ function deleteTodo(index) {
 }
 
 function toggleTodo(index) {
-  const todos = [...store.state.todos]
-  todos[index].completed = !todos[index].completed
+  const todos = store.state.todos.map((todo, i) => 
+    i === index ? { ...todo, completed: !todo.completed } : todo
+  )
   store.setState({ ...store.state, todos })
 }
 
@@ -46,9 +47,17 @@ function clearCompleted() {
 function getVisibleTodos() {
   const { todos } = store.state
   const route = getCurrentRoute()
-  if (route === '/active') return todos.filter(t => !t.completed)
-  if (route === '/completed') return todos.filter(t => t.completed)
-  return todos
+  
+  // Ajouter originalIndex à tous les todos
+  const todosWithIndex = todos.map((todo, index) => ({ ...todo, originalIndex: index }))
+  
+  if (route === '/active') {
+    return todosWithIndex.filter(t => !t.completed)
+  } else if (route === '/completed') {
+    return todosWithIndex.filter(t => t.completed)
+  } else {
+    return todosWithIndex
+  }
 }
 
 // Editing logic
@@ -62,8 +71,9 @@ function finishEdit(index, value) {
     deleteTodo(index)
     return
   }
-  const todos = [...store.state.todos]
-  todos[index].title = title
+  const todos = store.state.todos.map((todo, i) => 
+    i === index ? { ...todo, title } : todo
+  )
   store.setState({ ...store.state, todos, editingIndex: null })
 }
 
@@ -72,14 +82,12 @@ function cancelEdit() {
 }
 
 // Rendering logic
-let inputRef = null
-
 function render() {
   const { newTodo, todos, editingIndex } = store.state
+  const route = getCurrentRoute()
   const visibleTodos = getVisibleTodos()
   const activeCount = todos.filter(t => !t.completed).length
   const completedCount = todos.length - activeCount
-  const route = getCurrentRoute()
 
   const input = el('input', {
     class: 'new-todo',
@@ -90,8 +98,6 @@ function render() {
       if (e.key === 'Enter') addTodo(store.state.newTodo)
     }
   })
-
-  inputRef = input
 
   const todoItems = visibleTodos.map((todo, i) => {
     const liChildren = []
@@ -105,30 +111,30 @@ function render() {
             class: 'toggle',
             type: 'checkbox',
             checked: todo.completed,
-            onchange: () => toggleTodo(i)
+            onchange: () => toggleTodo(todo.originalIndex)
           }),
           el('label', {
-            ondblclick: () => startEdit(i),
+            ondblclick: () => startEdit(todo.originalIndex),
             children: [todo.title]
           }),
           el('button', {
             class: 'destroy',
-            onclick: () => deleteTodo(i)
+            onclick: () => deleteTodo(todo.originalIndex)
           })
         ]
       })
     )
 
     // input.edit field OUTSIDE .view
-    if (editingIndex === i) {
+    if (editingIndex === todo.originalIndex) {
       liChildren.push(
         el('input', {
           class: 'edit',
           value: todo.title,
           autofocus: true,
-          onblur: e => finishEdit(i, e.target.value),
+          onblur: e => finishEdit(todo.originalIndex, e.target.value),
           onkeydown: e => {
-            if (e.key === 'Enter') finishEdit(i, e.target.value)
+            if (e.key === 'Enter') finishEdit(todo.originalIndex, e.target.value)
             if (e.key === 'Escape') cancelEdit()
           }
         })
@@ -136,7 +142,7 @@ function render() {
     }
 
     return el('li', {
-      class: `${todo.completed ? 'completed' : ''} ${editingIndex === i ? 'editing' : ''}`,
+      class: `${todo.completed ? 'completed' : ''} ${editingIndex === todo.originalIndex ? 'editing' : ''}`,
       children: liChildren
     })
   })
@@ -224,12 +230,6 @@ function render() {
 
   const app = document.getElementById('app')
   mount(app, view)
-
-  // Focus sur l'input après le rendu
-  if (inputRef) {
-    inputRef.focus()
-    inputRef.setSelectionRange(inputRef.value.length, inputRef.value.length)
-  }
 }
 
 // Watch for state and route changes
