@@ -1,9 +1,10 @@
+import { Listener } from './event.js'
 
 let currentRoute = '/'
 const listeners = []
 
 export function initRouter() {
-  window.addEventListener('hashchange', handleHashChange)
+  Listener(window, 'hashchange', handleHashChange)
   handleHashChange() 
 }
 
