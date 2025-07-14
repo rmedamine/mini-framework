@@ -8,7 +8,7 @@ export function bindEvent(element, event, handler) {
     eventRegistry.set(element, events)
   }
 
-  if (!events[event]) {
+  if (!events[event]) { 
     events[event] = []
 
     // Assign native handler once

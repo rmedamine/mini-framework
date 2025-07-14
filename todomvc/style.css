@@ -1,5 +1,7 @@
 /* Custom styles for TodoMVC - MiniDOM implementation */
-
+body{
+  background-color: #222;
+}
 .filters {
   display: flex;
   justify-content: center;
