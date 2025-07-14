@@ -1,139 +1,169 @@
-# MiniDOM Framework
 
-**MiniDOM** is a lightweight JavaScript framework that offers a clean abstraction over the DOM, with built-in state management, client-side routing, and a custom event system. It follows the concept of "inversion of control", giving the framework full control over rendering and interaction.
+# MiniDOM — A Simple JavaScript Framework
 
----
-
-## 🔧 Features
-
-- 🧱 **DOM Abstraction** — Write UI using declarative virtual elements.
-- 🔁 **State Management** — Global reactive state with `subscribe()` and `setState()`.
-- 🔗 **Routing System** — URL-based routing using hash fragments (`#/`).
-- ⚡ **Event Handling** — Custom event binding mechanism (`bindEvent`, `Listener`).
-- 📦 **Diffing Engine** — Efficient DOM updates via virtual DOM comparison.
-- 📝 **TodoMVC Example** — Fully working TodoMVC implementation using MiniDOM.
+MiniDOM is a lightweight, minimalistic JavaScript framework designed to help you understand how modern frontend frameworks work under the hood. It provides core features like DOM abstraction, reactive state management, client-side routing, and a custom event system — all built from scratch.
 
 ---
 
-## 🚀 Quick Start
+## 🌟 Features
 
-### 📁 Project Structure
+- **Virtual DOM Abstraction**: Build your UI declaratively using JavaScript objects instead of raw DOM APIs.
+- **Reactive State Management**: A simple store with `subscribe()` and `setState()` that triggers automatic UI updates.
+- **Client-Side Routing**: Hash-based routing to switch views without reloading the page.
+- **Custom Event Handling**: An event system that supports multiple handlers per event, with easy attach/detach.
+- **Efficient DOM Updates**: A diffing algorithm updates only changed parts of the DOM.
+- **TodoMVC Example**: A complete, functional Todo app demonstrating all features in action.
 
-project-root/
+---
+
+## 🛠️ Getting Started
+
+### Folder Structure
+
+```
+mini-framework/
 ├── framework/
-│ ├── minidom.js
-│ ├── store.js
-│ ├── router.js
-│ ├── event.js
-│ └── diff.js
+│   ├── minidom.js      # Virtual DOM + mounting
+│   ├── diff.js         # Diffing and reconciliation
+│   ├── event.js        # Custom event system
+│   ├── store.js        # Reactive state management
+│   └── router.js       # Client-side routing
 ├── todomvc/
-│ ├── index.html
-│ ├── app.js
-│ └── style.css
-└── README.md
-### ▶️ Run the App
+│   ├── index.html      # HTML entry point with styles
+│   ├── app.js          # TodoMVC app implementation
+│   └── style.css       # Optional custom styles
+└── README.md           # This documentation
+```
 
-Open `todomvc/index.html` in your browser. No build steps required.
+### How to Run
+
+1. Open `todomvc/index.html` in a modern browser (no build tools required).
+2. Start adding todos, toggle completion, filter by route (All / Active / Completed).
+3. Observe the state-driven UI updates and routing in action.
 
 ---
 
-## 🧩 API Overview
+## 📚 Core Concepts
 
-### 🧱 DOM Abstraction
+### Virtual DOM
 
-#### `el(type, props)`
-Create a virtual DOM element.
+Instead of manipulating DOM elements directly, you create JavaScript objects representing the UI structure:
 
 ```js
-el('div', {
-  class: 'box',
+const vnode = el('div', {
+  class: 'container',
   children: [
-    el('h1', { children: ['Hello'] }),
-    'Text content'
+    el('h1', { children: ['Hello World'] }),
+    el('button', { onclick: () => alert('Clicked!'), children: ['Click Me'] })
   ]
 })
-mount(target, virtualTree)
-Mounts or updates a virtual tree to a real DOM node.
+```
 
-js
-Copier
-Modifier
-mount(document.getElementById('app'), myVirtualTree)
-🔁 State Management
-createStore(initialState)
-Creates a reactive store.
+This virtual tree is converted to real DOM elements and efficiently updated when state changes.
 
-js
-Copier
-Modifier
-const store = createStore({ count: 0 })
+---
+
+### State Management
+
+Create a reactive store that holds your app's state:
+
+```js
+const store = createStore({ todos: [], newTodo: '' })
 
 store.subscribe(state => {
-  console.log(state.count)
+  console.log('State updated:', state)
 })
 
-store.setState({ count: 1 })
-store.state
-Read current state.
+store.setState({ ...store.state, newTodo: 'Buy milk' })
+```
 
-store.setState(newState)
-Update state and re-render subscribers.
+- `subscribe(fn)` registers a listener called on every state change.
+- `setState(newState)` updates the state and triggers re-rendering.
 
-store.subscribe(fn)
-Listen to state changes.
+---
 
-🔗 Routing System
+### Routing
+
+MiniDOM uses the URL hash (`window.location.hash`) for routing:
+
+```js
 initRouter()
-Start hash-based routing.
 
-onRouteChange(fn)
-React to route changes.
-
-getCurrentRoute()
-Returns the current route (e.g., '/', '/active').
-
-js
-Copier
-Modifier
-onRouteChange((route) => {
-  console.log('Route changed to:', route)
+onRouteChange(route => {
+  console.log('Current route:', route)
 })
-⚡ Event System
-bindEvent(element, event, handler)
-Custom event binding (replaces addEventListener).
 
-js
-Copier
-Modifier
+const currentRoute = getCurrentRoute()
+```
+
+Supported routes include:
+
+- `/` or `#/` — All todos
+- `#/active` — Active (incomplete) todos
+- `#/completed` — Completed todos
+
+---
+
+### Event Handling
+
+A custom event system replaces standard `addEventListener`:
+
+```js
 bindEvent(button, 'click', () => alert('Clicked!'))
-Listener(element, eventType, handler)
-Advanced event binding with auto-unsubscribe:
 
-js
-Copier
-Modifier
-const remove = Listener(div, 'click', doSomething)
-// remove() to unbind
-✅ TodoMVC Example
-You can find the full example in /todomvc/app.js, which includes:
+// Or with auto-unsubscribe:
+const remove = Listener(button, 'click', myHandler)
+remove() // to remove the handler
+```
 
-Adding / editing / removing todos
+---
 
-Filtering by All, Active, Completed
+## 🔄 DOM Diffing & Updating
 
-Persistent state updates with rerendering
+When state changes, MiniDOM:
 
-⚙️ Why MiniDOM?
-MiniDOM is built to understand how frameworks work behind the scenes:
+1. Creates a new virtual DOM tree.
+2. Compares it to the previous virtual tree.
+3. Applies only the necessary changes to the real DOM.
 
-It demystifies concepts like Virtual DOM, reconciliation, and reactivity.
+This efficient update minimizes reflows and improves performance.
 
-Helps you learn the architecture of real frameworks like React, Vue, and Svelte.
+---
 
-You control the rendering logic, routing, and UI updates.
+## 📝 TodoMVC Example Overview
 
-📄 License
-MIT — Feel free to modify, learn, or build upon it.
+The TodoMVC app demonstrates:
 
-🙌 Author
-Built with ❤️ as part of the Framework Creation Project.
+- Adding new todos via input.
+- Toggling completion status.
+- Editing todo titles inline.
+- Deleting todos.
+- Filtering todos based on route.
+- Clearing completed todos.
+- Keeping UI synced with URL.
+
+---
+
+## Why Build MiniDOM?
+
+Building MiniDOM helps you:
+
+- Learn core frontend concepts by hands-on coding.
+- Understand how frameworks like React, Vue, or Svelte work internally.
+- Appreciate the complexity hidden behind simple APIs.
+
+---
+
+## License
+
+This project is open-source under the MIT License.
+
+---
+
+## Author
+
+Created with passion to learn and teach frontend fundamentals.
+
+---
+
+Feel free to explore, modify, and extend MiniDOM for your own projects!
