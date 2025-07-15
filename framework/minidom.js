@@ -11,13 +11,15 @@ export function el(type, props = {}) {
 
 // Fonction pour créer un élément DOM à partir d'un élément virtuel
 function createDOMElement(virtualElement) {
-  if (typeof virtualElement === 'string') {
-    return document.createTextNode(virtualElement)
-  }
-  
   if (virtualElement === false || virtualElement === null || virtualElement === undefined) {
     return null
   }
+  
+  
+  if (typeof virtualElement === 'string' || virtualElement === 'number') {
+    return document.createTextNode(virtualElement)
+  }
+  
   
   const element = document.createElement(virtualElement.type)
   const props = virtualElement.props || {}

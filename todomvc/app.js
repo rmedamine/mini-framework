@@ -19,25 +19,27 @@ function addTodo(title) {
     newTodo: ''
   })
 }
-
+// Remove a task from the list
 function deleteTodo(index) {
   const todos = [...store.state.todos]
   todos.splice(index, 1)
   store.setState({ ...store.state, todos })
 }
 
+// Turn on and off the task done box
 function toggleTodo(index) {
-  const todos = store.state.todos.map((todo, i) => 
+  const todos = store.state.todos.map((todo, i) =>
     i === index ? { ...todo, completed: !todo.completed } : todo
   )
   store.setState({ ...store.state, todos })
 }
 
+// Turn on and off the  all task done box
 function toggleAll(completed) {
   const todos = store.state.todos.map(todo => ({ ...todo, completed }))
   store.setState({ ...store.state, todos })
 }
-
+// Remove completed tasks
 function clearCompleted() {
   const todos = store.state.todos.filter(todo => !todo.completed)
   store.setState({ ...store.state, todos })
@@ -47,10 +49,10 @@ function clearCompleted() {
 function getVisibleTodos() {
   const { todos } = store.state
   const route = getCurrentRoute()
-  
+
   // Ajouter originalIndex à tous les todos
   const todosWithIndex = todos.map((todo, index) => ({ ...todo, originalIndex: index }))
-  
+
   if (route === '/active') {
     return todosWithIndex.filter(t => !t.completed)
   } else if (route === '/completed') {
@@ -64,24 +66,33 @@ function getVisibleTodos() {
 function startEdit(index) {
   store.setState({ ...store.state, editingIndex: index })
 }
-
+//After clicking on the income, the task is completed and the changes are saved.
 function finishEdit(index, value) {
   const title = value.trim()
   if (!title) {
     deleteTodo(index)
     return
   }
-  const todos = store.state.todos.map((todo, i) => 
+  const todos = store.state.todos.map((todo, i) =>
     i === index ? { ...todo, title } : todo
   )
   store.setState({ ...store.state, todos, editingIndex: null })
 }
-
+//  Cancel edit after double clicking me
 function cancelEdit() {
   store.setState({ ...store.state, editingIndex: null })
 }
 
 // Rendering logic
+// Save and edit changes to the page without the rest of the dom
+
+//Rendering:
+//The render() function assembles everything and builds the DOM using el(...):
+//Input to add a task
+//todoItems: Each li element has a .view (checkbox + title + delete) and an input to modify it
+//Filter: All / Active / Completed
+//Clear Completed: Shows only those tasks that are active
+
 function render() {
   const { newTodo, todos, editingIndex } = store.state
   const route = getCurrentRoute()
@@ -110,16 +121,16 @@ function render() {
           // Afficher la checkbox seulement si on n'est PAS dans la vue 'active'
           route === '/active'
             ? el('span', {
-                class: 'toggle fake-checkbox',
-                onclick: e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); },
-                style: 'display:inline-block;width:40px;height:40px;border-radius:50%;border:1px solid #ededed;background:#fff;vertical-align:middle;cursor:pointer;margin-right:10px;'
-              })
+              class: 'toggle fake-checkbox',
+              onclick: e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); },
+              style: 'display:inline-block;width:40px;height:40px;border-radius:50%;border:1px solid #ededed;background:#fff;vertical-align:middle;cursor:pointer;margin-right:10px;'
+            })
             : el('input', {
-                class: 'toggle',
-                type: 'checkbox',
-                checked: todo.completed,
-                onchange: () => toggleTodo(todo.originalIndex)
-              }),
+              class: 'toggle',
+              type: 'checkbox',
+              checked: todo.completed,
+              onchange: () => toggleTodo(todo.originalIndex)
+            }),
           el('label', {
             ondblclick: () => startEdit(todo.originalIndex),
             onclick: route === '/active' ? (e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); setTimeout(() => document.activeElement.blur(), 0); }) : undefined,
@@ -140,7 +151,7 @@ function render() {
           class: 'edit',
           value: todo.title,
           autofocus: true,
-          onblur: e => finishEdit(todo.originalIndex, e.target.value),
+          onblur: e => cancelEdit(),
           onkeydown: e => {
             if (e.key === 'Enter') finishEdit(todo.originalIndex, e.target.value)
             if (e.key === 'Escape') cancelEdit()
@@ -167,72 +178,72 @@ function render() {
       }),
 
       todos.length > 0 &&
-        el('section', {
-          class: 'main',
-          children: [
-            el('input', {
-              id: 'toggle-all',
-              class: 'toggle-all',
-              type: 'checkbox',
-              checked: activeCount === 0,
-              onchange: e => toggleAll(e.target.checked)
-            }),
-            el('label', { for: 'toggle-all' }),
-            el('ul', {
-              class: `todo-list${route === '/active' ? ' active-view' : ''}`,
-              children: todoItems
-            })
-          ]
-        }),
+      el('section', {
+        class: 'main',
+        children: [
+          el('input', {
+            id: 'toggle-all',
+            class: 'toggle-all',
+            type: 'checkbox',
+            checked: activeCount === 0,
+            onchange: e => toggleAll(e.target.checked)
+          }),
+          el('label', { for: 'toggle-all' }),
+          el('ul', {
+            class: `todo-list${route === '/active' ? ' active-view' : ''}`,
+            children: todoItems
+          })
+        ]
+      }),
 
       todos.length > 0 &&
-        el('footer', {
-          class: 'footer',
-          children: [
-            el('span', {
-              class: 'todo-count',
-              children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left`]
-            }),
-            el('ul', {
-              class: 'filters',
-              children: [
-                el('li', {
-                  children: [
-                    el('a', {
-                      href: '#/',
-                      class: route === '/' ? 'selected' : '',
-                      children: ['All']
-                    })
-                  ]
-                }),
-                el('li', {
-                  children: [
-                    el('a', {
-                      href: '#/active',
-                      class: route === '/active' ? 'selected' : '',
-                      children: ['Active']
-                    })
-                  ]
-                }),
-                el('li', {
-                  children: [
-                    el('a', {
-                      href: '#/completed',
-                      class: route === '/completed' ? 'selected' : '',
-                      children: ['Completed']
-                    })
-                  ]
-                })
-              ]
-            }),
-            completedCount > 0 &&
-              el('button', {
-                class: 'clear-completed',
-                onclick: clearCompleted,
-                children: ['Clear completed']
+      el('footer', {
+        class: 'footer',
+        children: [
+          el('span', {
+            class: 'todo-count',
+            children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left`]
+          }),
+          el('ul', {
+            class: 'filters',
+            children: [
+              el('li', {
+                children: [
+                  el('a', {
+                    href: '#/',
+                    class: route === '/' ? 'selected' : '',
+                    children: ['All']
+                  })
+                ]
+              }),
+              el('li', {
+                children: [
+                  el('a', {
+                    href: '#/active',
+                    class: route === '/active' ? 'selected' : '',
+                    children: ['Active']
+                  })
+                ]
+              }),
+              el('li', {
+                children: [
+                  el('a', {
+                    href: '#/completed',
+                    class: route === '/completed' ? 'selected' : '',
+                    children: ['Completed']
+                  })
+                ]
               })
-          ]
-        })
+            ]
+          }),
+          completedCount > 0 &&
+          el('button', {
+            class: 'clear-completed',
+            onclick: clearCompleted,
+            children: ['Clear completed']
+          })
+        ]
+      })
     ]
   })
 
