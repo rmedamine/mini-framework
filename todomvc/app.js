@@ -107,19 +107,22 @@ function render() {
       el('div', {
         class: 'view',
         children: [
+          // Afficher la checkbox seulement si on n'est PAS dans la vue 'active'
           el('input', {
             class: 'toggle',
             type: 'checkbox',
             checked: todo.completed,
-            onchange: () => toggleTodo(todo.originalIndex)
+            onchange: () => toggleTodo(todo.originalIndex),
+            disabled: route === '/active'
           }),
           el('label', {
             ondblclick: () => startEdit(todo.originalIndex),
+            onclick: route === '/active' ? (e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); }) : undefined,
             children: [todo.title]
           }),
           el('button', {
             class: 'destroy',
-            onclick: () => deleteTodo(todo.originalIndex)
+            onclick: e => { e.preventDefault(); e.stopPropagation(); deleteTodo(todo.originalIndex); }
           })
         ]
       })
