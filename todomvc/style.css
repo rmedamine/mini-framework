@@ -32,3 +32,23 @@ body{
   color: #d9d9d9;
   text-decoration: line-through;
 }
+
+/* Empêcher la coche verte uniquement dans la vue active */
+.todo-list.active-view input[type="checkbox"] {
+  background-color: #fff !important;
+  border-color: #ededed !important;
+  background-image: none !important;
+}
+
+.fake-checkbox {
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #ededed;
+  background: #fff;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: pointer;
+  margin-right: 10px;
+}

@@ -108,21 +108,26 @@ function render() {
         class: 'view',
         children: [
           // Afficher la checkbox seulement si on n'est PAS dans la vue 'active'
-          el('input', {
-            class: 'toggle',
-            type: 'checkbox',
-            checked: todo.completed,
-            onchange: () => toggleTodo(todo.originalIndex),
-            disabled: route === '/active'
-          }),
+          route === '/active'
+            ? el('span', {
+                class: 'toggle fake-checkbox',
+                onclick: e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); },
+                style: 'display:inline-block;width:40px;height:40px;border-radius:50%;border:1px solid #ededed;background:#fff;vertical-align:middle;cursor:pointer;margin-right:10px;'
+              })
+            : el('input', {
+                class: 'toggle',
+                type: 'checkbox',
+                checked: todo.completed,
+                onchange: () => toggleTodo(todo.originalIndex)
+              }),
           el('label', {
             ondblclick: () => startEdit(todo.originalIndex),
-            onclick: route === '/active' ? (e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); }) : undefined,
+            onclick: route === '/active' ? (e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); setTimeout(() => document.activeElement.blur(), 0); }) : undefined,
             children: [todo.title]
           }),
           el('button', {
             class: 'destroy',
-            onclick: e => { e.preventDefault(); e.stopPropagation(); deleteTodo(todo.originalIndex); }
+            onclick: () => deleteTodo(todo.originalIndex)
           })
         ]
       })
@@ -174,7 +179,7 @@ function render() {
             }),
             el('label', { for: 'toggle-all' }),
             el('ul', {
-              class: 'todo-list',
+              class: `todo-list${route === '/active' ? ' active-view' : ''}`,
               children: todoItems
             })
           ]
