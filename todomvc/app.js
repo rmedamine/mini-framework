@@ -64,7 +64,14 @@ function getVisibleTodos() {
 
 // Editing logic
 function startEdit(index) {
-  store.setState({ ...store.state, editingIndex: index })
+  store.setState({ ...store.state, editingIndex: index });
+  // Give the input time to render before focusing
+  setTimeout(() => {
+    const editInput = document.querySelector('.editing .edit');
+    if (editInput) {
+      editInput.focus();
+    }
+  }, 0);
 }
 //After clicking on the income, the task is completed and the changes are saved.
 function finishEdit(index, value) {
@@ -151,10 +158,20 @@ function render() {
           class: 'edit',
           value: todo.title,
           autofocus: true,
-          onblur: e => cancelEdit(),
+          onblur: e => {
+            if (editingIndex !== null) {
+              finishEdit(todo.originalIndex, e.target.value);
+            }
+          },
           onkeydown: e => {
-            if (e.key === 'Enter') finishEdit(todo.originalIndex, e.target.value)
-            if (e.key === 'Escape') cancelEdit()
+            if (e.key === 'Enter') {
+              finishEdit(todo.originalIndex, e.target.value);
+              e.target.blur();
+            }
+            if (e.key === 'Escape') {
+              cancelEdit();
+              e.target.blur();
+            }
           }
         })
       )
