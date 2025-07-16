@@ -1,22 +1,22 @@
 import { Listener } from './event.js'
 
-let currentRoute = '/'
-const listeners = []
-
-export function initRouter() {
-  Listener(window, 'hashchange', handleHashChange)
-  handleHashChange() 
+const state = {
+  route: '/',
+  callbackFunctions: []
 }
 
-function handleHashChange() {
-  currentRoute = window.location.hash.replace('#', '') || '/'
-  listeners.forEach(fn => fn(currentRoute))
+const getCleanRoute = () => window.location.hash.slice(1) || '/'
+
+function updateRoute() {
+  state.route = getCleanRoute()
+  state.callbackFunctions.forEach(fn => fn(state.route))
 }
 
-export function onRouteChange(fn) {
-  listeners.push(fn)
+export const initRouter = () => {
+  Listener(window, 'hashchange', updateRoute)
+  updateRoute()
 }
 
-export function getCurrentRoute() {
-  return currentRoute
-}
+export const onRouteChange = fn => state.callbackFunctions.push(fn)
+
+export const getCurrentRoute = () => state.route
