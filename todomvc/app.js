@@ -140,7 +140,6 @@ function render() {
             }),
           el('label', {
             ondblclick: () => startEdit(todo.originalIndex),
-            onclick: route === '/active' ? (e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); setTimeout(() => document.activeElement.blur(), 0); }) : undefined,
             children: [todo.title]
           }),
           el('button', {
@@ -160,7 +159,7 @@ function render() {
           autofocus: true,
           onblur: e => {
             if (editingIndex !== null) {
-              finishEdit(todo.originalIndex, e.target.value);
+              cancelEdit();
             }
           },
           onkeydown: e => {
