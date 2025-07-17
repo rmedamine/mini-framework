@@ -46,14 +46,17 @@ function createDOMElement(virtualElement) {
     }
   }
 
-  // If this is the currently focused element, maintain focus
+  // If this is the currently focused element, maintain focus and cursor position
   const activeElement = document.activeElement
-  if (activeElement && props.id && activeElement.id === props.id) {
-    shouldFocus = true
-  }
-
-  if (shouldFocus) {
-    setTimeout(() => element.focus(), 0)
+  if (activeElement && element instanceof HTMLInputElement && activeElement instanceof HTMLInputElement) {
+    if ((props.id && activeElement.id === props.id) || (props.class && activeElement.className === props.class)) {
+      shouldFocus = true
+      const cursorPos = activeElement.selectionStart
+      setTimeout(() => {
+        element.focus()
+        element.setSelectionRange(cursorPos, cursorPos)
+      }, 0)
+    }
   }
 
   return element

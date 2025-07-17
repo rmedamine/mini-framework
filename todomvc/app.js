@@ -6,8 +6,16 @@ import { initRouter, onRouteChange, getCurrentRoute } from '../framework/router.
 const store = createStore({
   todos: [],
   newTodo: '',
-  editingIndex: null
+  editingIndex: null,
+  skipRender: false
 })
+
+// Function to update state without re-rendering
+function updateStateWithoutRender(newState) {
+  store.skipRender = true
+  store.setState(newState)
+  store.skipRender = false
+}
 
 // Handle actions
 function addTodo(title) {
@@ -168,10 +176,10 @@ function render() {
                 'data-testid': 'text-input',
                 placeholder: 'What needs to be done?',
                 value: newTodo,
-                autofocus: true,
                 oninput: e => {
-                  const inputValue = e.target.value || ''
-                  store.setState({ ...store.state, newTodo: inputValue })
+                  const input = e.target
+                  const value = input.value || ''
+                  updateStateWithoutRender({ ...store.state, newTodo: value })
                 },
                 onkeydown: e => {
                   if (e.key === 'Enter') {
@@ -276,7 +284,11 @@ function render() {
 }
 
 // Watch for state and route changes
-store.subscribe(render)
+store.subscribe(() => {
+  if (!store.skipRender) {
+    render()
+  }
+})
 onRouteChange(render)
 initRouter()
 
