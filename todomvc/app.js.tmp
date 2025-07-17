@@ -6,19 +6,11 @@ import { initRouter, onRouteChange, getCurrentRoute } from '../framework/router.
 const store = createStore({
   todos: [],
   newTodo: '',
-  editingIndex: null,
-  skipRender: false
+  editingIndex: null
 })
 
-// Function to update state without re-rendering
-function updateStateWithoutRender(newState) {
-  store.skipRender = true
-  store.setState(newState)
-  store.skipRender = false
-}
-
 // Handle actions
-function addTodo(title, shouldMaintainFocus = false) {
+function addTodo(title) {
   const trimmed = title.trim()
   if (!trimmed) return
   store.setState({
@@ -26,15 +18,6 @@ function addTodo(title, shouldMaintainFocus = false) {
     todos: [...store.state.todos, { title: trimmed, completed: false }],
     newTodo: ''
   })
-  // Keep focus on the input after state update
-  if (shouldMaintainFocus) {
-    setTimeout(() => {
-      const input = document.getElementById('todo-input')
-      if (input) {
-        input.focus()
-      }
-    }, 0)
-  }
 }
 
 function deleteTodo(index) {
@@ -169,7 +152,9 @@ function render() {
     })
   })
 
-  const view = [
+  const view = el('section', {
+    class: 'todoapp',
+    children: [
       el('header', {
         class: 'header',
         'data-testid': 'header',
@@ -185,15 +170,9 @@ function render() {
                 'data-testid': 'text-input',
                 placeholder: 'What needs to be done?',
                 value: newTodo,
-                oninput: e => {
-                  const input = e.target
-                  const value = input.value || ''
-                  updateStateWithoutRender({ ...store.state, newTodo: value })
-                },
+                oninput: e => store.setState({ ...store.state, newTodo: e.target.value }),
                 onkeydown: e => {
-                  if (e.key === 'Enter') {
-                    addTodo(store.state.newTodo, true)
-                  }
+                  if (e.key === 'Enter') addTodo(store.state.newTodo)
                 }
               }),
               el('label', {
@@ -279,6 +258,7 @@ function render() {
               })
             ]
           }),
+          completedCount > 0 &&
           el('button', {
             class: 'clear-completed',
             onclick: clearCompleted,
@@ -287,17 +267,14 @@ function render() {
         ]
       })
     ]
+  })
 
   const root = document.getElementById('root')
   mount(root, view)
 }
 
 // Watch for state and route changes
-store.subscribe(() => {
-  if (!store.skipRender) {
-    render()
-  }
-})
+store.subscribe(render)
 onRouteChange(render)
 initRouter()
 
