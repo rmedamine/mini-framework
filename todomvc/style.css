@@ -506,27 +506,5 @@ hr {
     top: 100%
 }
 
-.learn-bar>.learn {
-    background-color: hsla(0,0%,100%,.6);
-    border-radius: 5px;
-    left: -300px;
-    padding: 10px;
-    position: absolute;
-    top: 8px;
-    transition-duration: .5s;
-    transition-property: left;
-    width: 272px
-}
-
-@media (min-width: 899px) {
-    .learn-bar {
-        padding-left:300px;
-        width: auto
-    }
-
-    .learn-bar>.learn {
-        left: 8px
-    }
-}
 
 /*# sourceMappingURL=app.css.map*/
