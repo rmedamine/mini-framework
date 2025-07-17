@@ -24,6 +24,9 @@ function createDOMElement(virtualElement) {
   const element = document.createElement(virtualElement.type)
   const props = virtualElement.props || {}
 
+  // Track if this element should receive focus
+  let shouldFocus = false
+  
   for (const [key, value] of Object.entries(props)) {
     if (key === 'children') {
       setChildren(element, value)
@@ -34,9 +37,23 @@ function createDOMElement(virtualElement) {
       element.className = value
     } else if (key === 'checked') {
       element.checked = value
+    } else if (key === 'autofocus') {
+      shouldFocus = value
+    } else if (key === 'value' && element instanceof HTMLInputElement) {
+      element.value = value
     } else {
       element.setAttribute(key, value)
     }
+  }
+
+  // If this is the currently focused element, maintain focus
+  const activeElement = document.activeElement
+  if (activeElement && props.id && activeElement.id === props.id) {
+    shouldFocus = true
+  }
+
+  if (shouldFocus) {
+    setTimeout(() => element.focus(), 0)
   }
 
   return element
@@ -58,6 +75,28 @@ export function setChildren(parent, children = []) {
 
 // Nouvelle fonction mount avec diffing
 export function mount(target, virtualNode) {
+  if (Array.isArray(virtualNode)) {
+    const focusedElement = document.activeElement
+    const focusedId = focusedElement ? focusedElement.id : null
+    
+    while (target.firstChild) {
+      target.removeChild(target.firstChild)
+    }
+    virtualNode.forEach(node => {
+      if (node) {
+        const domElement = createDOMElement(node)
+        if (domElement) {
+          target.appendChild(domElement)
+          // Restore focus if this is the previously focused element
+          if (focusedId && domElement.id === focusedId) {
+            domElement.focus()
+          }
+        }
+      }
+    })
+    return
+  }
+
   const oldVirtualTree = getCachedTree(target)
   
   // Utiliser le diffing pour mettre à jour

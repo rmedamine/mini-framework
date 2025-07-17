@@ -1,10 +1,25 @@
-/* Custom styles for TodoMVC - MiniDOM implementation */
-body{
-  background-color: #222;
+/* Custom styles for TodoMVC implementation */
+.toggle-all-container {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.toggle-all-label {
+  width: 60px;
+  height: 34px;
+  font-size: 0;
+  position: absolute;
+  top: -52px;
+  left: -13px;
+  -webkit-transform: rotate(90deg);
+  transform: rotate(90deg);
 }
 .filters {
   display: flex;
   justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .filters li {
@@ -40,17 +55,26 @@ body{
   display: none;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 /* Ensure proper styling for completed todos */
 .todo-list li.completed label {
   color: #d9d9d9;
   text-decoration: line-through;
 }
 
-/* Empêcher la coche verte uniquement dans la vue active */
-.todo-list.active-view input[type="checkbox"] {
-  background-color: #fff !important;
-  border-color: #ededed !important;
-  background-image: none !important;
+.input-container {
+  position: relative;
 }
 
 .fake-checkbox {
@@ -65,3 +89,5 @@ body{
   cursor: pointer;
   margin-right: 10px;
 }
+
+

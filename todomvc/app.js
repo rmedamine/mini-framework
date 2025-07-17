@@ -19,14 +19,13 @@ function addTodo(title) {
     newTodo: ''
   })
 }
-// Remove a task from the list
+
 function deleteTodo(index) {
   const todos = [...store.state.todos]
   todos.splice(index, 1)
   store.setState({ ...store.state, todos })
 }
 
-// Turn on and off the task done box
 function toggleTodo(index) {
   const todos = store.state.todos.map((todo, i) =>
     i === index ? { ...todo, completed: !todo.completed } : todo
@@ -34,12 +33,11 @@ function toggleTodo(index) {
   store.setState({ ...store.state, todos })
 }
 
-// Turn on and off the  all task done box
 function toggleAll(completed) {
   const todos = store.state.todos.map(todo => ({ ...todo, completed }))
   store.setState({ ...store.state, todos })
 }
-// Remove completed tasks
+
 function clearCompleted() {
   const todos = store.state.todos.filter(todo => !todo.completed)
   store.setState({ ...store.state, todos })
@@ -49,8 +47,6 @@ function clearCompleted() {
 function getVisibleTodos() {
   const { todos } = store.state
   const route = getCurrentRoute()
-
-  // Ajouter originalIndex à tous les todos
   const todosWithIndex = todos.map((todo, index) => ({ ...todo, originalIndex: index }))
 
   if (route === '/active') {
@@ -64,16 +60,15 @@ function getVisibleTodos() {
 
 // Editing logic
 function startEdit(index) {
-  store.setState({ ...store.state, editingIndex: index });
-  // Give the input time to render before focusing
+  store.setState({ ...store.state, editingIndex: index })
   setTimeout(() => {
-    const editInput = document.querySelector('.editing .edit');
+    const editInput = document.querySelector('.editing .edit')
     if (editInput) {
-      editInput.focus();
+      editInput.focus()
     }
-  }, 0);
+  }, 0)
 }
-//After clicking on the income, the task is completed and the changes are saved.
+
 function finishEdit(index, value) {
   const title = value.trim()
   if (!title) {
@@ -85,20 +80,10 @@ function finishEdit(index, value) {
   )
   store.setState({ ...store.state, todos, editingIndex: null })
 }
-//  Cancel edit after double clicking me
+
 function cancelEdit() {
   store.setState({ ...store.state, editingIndex: null })
 }
-
-// Rendering logic
-// Save and edit changes to the page without the rest of the dom
-
-//Rendering:
-//The render() function assembles everything and builds the DOM using el(...):
-//Input to add a task
-//todoItems: Each li element has a .view (checkbox + title + delete) and an input to modify it
-//Filter: All / Active / Completed
-//Clear Completed: Shows only those tasks that are active
 
 function render() {
   const { newTodo, todos, editingIndex } = store.state
@@ -107,50 +92,34 @@ function render() {
   const activeCount = todos.filter(t => !t.completed).length
   const completedCount = todos.length - activeCount
 
-  const input = el('input', {
-    class: 'new-todo',
-    placeholder: 'What needs to be done?',
-    value: newTodo,
-    oninput: e => store.setState({ ...store.state, newTodo: e.target.value }),
-    onkeydown: e => {
-      if (e.key === 'Enter') addTodo(store.state.newTodo)
-    }
-  })
-
-  const todoItems = visibleTodos.map((todo, i) => {
+  const todoItems = visibleTodos.map(todo => {
     const liChildren = []
 
-    // .view block
     liChildren.push(
       el('div', {
         class: 'view',
         children: [
-          // Afficher la checkbox seulement si on n'est PAS dans la vue 'active'
-          route === '/active'
-            ? el('span', {
-              class: 'toggle fake-checkbox',
-              onclick: e => { e.preventDefault(); e.stopPropagation(); toggleTodo(todo.originalIndex); },
-              style: 'display:inline-block;width:40px;height:40px;border-radius:50%;border:1px solid #ededed;background:#fff;vertical-align:middle;cursor:pointer;margin-right:10px;'
-            })
-            : el('input', {
-              class: 'toggle',
-              type: 'checkbox',
-              checked: todo.completed,
-              onchange: () => toggleTodo(todo.originalIndex)
-            }),
+          el('input', {
+            class: 'toggle',
+            type: 'checkbox',
+            'data-testid': 'todo-item-toggle',
+            checked: todo.completed,
+            onchange: () => toggleTodo(todo.originalIndex)
+          }),
           el('label', {
+            'data-testid': 'todo-item-label',
             ondblclick: () => startEdit(todo.originalIndex),
             children: [todo.title]
           }),
           el('button', {
             class: 'destroy',
+            'data-testid': 'todo-item-button',
             onclick: () => deleteTodo(todo.originalIndex)
           })
         ]
       })
     )
 
-    // input.edit field OUTSIDE .view
     if (editingIndex === todo.originalIndex) {
       liChildren.push(
         el('input', {
@@ -159,17 +128,17 @@ function render() {
           autofocus: true,
           onblur: e => {
             if (editingIndex !== null) {
-              cancelEdit();
+              cancelEdit()
             }
           },
           onkeydown: e => {
             if (e.key === 'Enter') {
-              finishEdit(todo.originalIndex, e.target.value);
-              e.target.blur();
+              finishEdit(todo.originalIndex, e.target.value)
+              e.target.blur()
             }
             if (e.key === 'Escape') {
-              cancelEdit();
-              e.target.blur();
+              cancelEdit()
+              e.target.blur()
             }
           }
         })
@@ -178,35 +147,74 @@ function render() {
 
     return el('li', {
       class: `${todo.completed ? 'completed' : ''} ${editingIndex === todo.originalIndex ? 'editing' : ''}`,
+      'data-testid': 'todo-item',
       children: liChildren
     })
   })
 
-  const view = el('section', {
-    class: 'todoapp',
-    children: [
+  const view = [
       el('header', {
         class: 'header',
+        'data-testid': 'header',
         children: [
           el('h1', { children: ['todos'] }),
-          input
+          el('div', {
+            class: 'input-container',
+            children: [
+              el('input', {
+                class: 'new-todo',
+                id: 'todo-input',
+                type: 'text',
+                'data-testid': 'text-input',
+                placeholder: 'What needs to be done?',
+                value: newTodo,
+                autofocus: true,
+                oninput: e => {
+                  const inputValue = e.target.value || ''
+                  store.setState({ ...store.state, newTodo: inputValue })
+                },
+                onkeydown: e => {
+                  if (e.key === 'Enter') {
+                    addTodo(store.state.newTodo)
+                  }
+                }
+              }),
+              el('label', {
+                class: 'visually-hidden',
+                for: 'todo-input',
+                children: ['New Todo Input']
+              })
+            ]
+          })
         ]
       }),
 
       todos.length > 0 &&
-      el('section', {
+      el('main', {
         class: 'main',
+        'data-testid': 'main',
         children: [
-          el('input', {
-            id: 'toggle-all',
-            class: 'toggle-all',
-            type: 'checkbox',
-            checked: activeCount === 0,
-            onchange: e => toggleAll(e.target.checked)
+          el('div', {
+            class: 'toggle-all-container',
+            children: [
+              el('input', {
+                id: 'toggle-all',
+                class: 'toggle-all',
+                type: 'checkbox',
+                'data-testid': 'toggle-all',
+                checked: activeCount === 0,
+                onchange: e => toggleAll(e.target.checked)
+              }),
+              el('label', { 
+                class: 'toggle-all-label',
+                for: 'toggle-all',
+                children: ['Toggle All Input']
+              })
+            ]
           }),
-          el('label', { for: 'toggle-all' }),
           el('ul', {
-            class: `todo-list${route === '/active' ? ' active-view' : ''}`,
+            class: 'todo-list',
+            'data-testid': 'todo-list',
             children: todoItems
           })
         ]
@@ -215,13 +223,15 @@ function render() {
       todos.length > 0 &&
       el('footer', {
         class: 'footer',
+        'data-testid': 'footer',
         children: [
           el('span', {
             class: 'todo-count',
-            children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left`]
+            children: [`${activeCount} item${activeCount !== 1 ? 's' : ''} left!`]
           }),
           el('ul', {
             class: 'filters',
+            'data-testid': 'footer-navigation',
             children: [
               el('li', {
                 children: [
@@ -252,7 +262,6 @@ function render() {
               })
             ]
           }),
-          completedCount > 0 &&
           el('button', {
             class: 'clear-completed',
             onclick: clearCompleted,
@@ -261,10 +270,9 @@ function render() {
         ]
       })
     ]
-  })
 
-  const app = document.getElementById('app')
-  mount(app, view)
+  const root = document.getElementById('root')
+  mount(root, view)
 }
 
 // Watch for state and route changes
