@@ -79,24 +79,21 @@ export function setChildren(parent, children = []) {
 // Nouvelle fonction mount avec diffing
 export function mount(target, virtualNode) {
   if (Array.isArray(virtualNode)) {
-    const focusedElement = document.activeElement
-    const focusedId = focusedElement ? focusedElement.id : null
-    
-    while (target.firstChild) {
-      target.removeChild(target.firstChild)
-    }
-    virtualNode.forEach(node => {
-      if (node) {
-        const domElement = createDOMElement(node)
-        if (domElement) {
-          target.appendChild(domElement)
-          // Restore focus if this is the previously focused element
-          if (focusedId && domElement.id === focusedId) {
-            domElement.focus()
-          }
-        }
+    // Wrap array in a container element for consistent diffing
+    const containerElement = {
+      type: 'div',
+      props: {
+        children: virtualNode
       }
-    })
+    }
+    
+    const oldVirtualTree = getCachedTree(target)
+    
+    // Use diffing for array updates too
+    diffAndUpdate(target, oldVirtualTree, containerElement)
+    
+    // Cache the new virtual tree
+    setCachedTree(target, containerElement)
     return
   }
 

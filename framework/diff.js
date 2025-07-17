@@ -21,27 +21,34 @@ export function diffAndUpdateChildren(parent, oldChildren, newChildren) {
   
   const oldLength = normalizedOldChildren.length
   const newLength = normalizedNewChildren.length
+  const maxLength = Math.max(oldLength, newLength)
   
-  // Si les longueurs sont différentes, on doit gérer les ajouts/suppressions
-  if (oldLength !== newLength) {
-    // Supprimer les enfants en trop
-    while (parent.children.length > newLength) {
-      parent.removeChild(parent.lastChild)
-    }
+  // Process each child position
+  for (let i = 0; i < maxLength; i++) {
+    const oldChild = i < oldLength ? normalizedOldChildren[i] : null
+    const newChild = i < newLength ? normalizedNewChildren[i] : null
     
-    // Ajouter les nouveaux enfants
-    for (let i = oldLength; i < newLength; i++) {
-      const newElement = createElement(normalizedNewChildren[i])
+    if (!oldChild && newChild) {
+      // Add new child
+      const newElement = createElement(newChild)
       if (newElement) {
         parent.appendChild(newElement)
       }
+    } else if (oldChild && !newChild) {
+      // Remove old child
+      const childToRemove = parent.childNodes[i]
+      if (childToRemove) {
+        parent.removeChild(childToRemove)
+      }
+    } else if (oldChild && newChild) {
+      // Update existing child
+      updateChild(parent, i, oldChild, newChild)
     }
   }
   
-  // Mettre à jour les enfants existants
-  const minLength = Math.min(oldLength, newLength)
-  for (let i = 0; i < minLength; i++) {
-    updateChild(parent, i, normalizedOldChildren[i], normalizedNewChildren[i])
+  // Remove any remaining children
+  while (parent.childNodes.length > newLength) {
+    parent.removeChild(parent.lastChild)
   }
 }
 
@@ -49,19 +56,10 @@ export function diffAndUpdateChildren(parent, oldChildren, newChildren) {
 function updateChild(parent, index, oldChild, newChild) {
   const domChild = parent.children[index]
   
-  // Si les types sont différents, remplacer complètement
-  if (typeof oldChild !== typeof newChild || 
-      (typeof oldChild === 'object' && oldChild.type !== newChild.type)) {
-    const newElement = createElement(newChild)
-    if (newElement) {
-      parent.replaceChild(newElement, domChild)
-    }
-    return
-  }
-  
-  // Si c'est du texte, mettre à jour directement
-  if (typeof oldChild === 'string') {
+  // Handle text nodes differently since they don't appear in children collection
+  if (typeof oldChild === 'string' && typeof newChild === 'string') {
     if (oldChild !== newChild) {
+      // Find the text node in childNodes (not children)
       const textNode = parent.childNodes[index]
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         textNode.textContent = newChild
@@ -70,13 +68,30 @@ function updateChild(parent, index, oldChild, newChild) {
     return
   }
   
-  // Mettre à jour les propriétés de l'élément
-  updateElementProps(domChild, oldChild.props || {}, newChild.props || {})
+  // If one is text and other is element, or types differ, replace
+  if (typeof oldChild !== typeof newChild || 
+      (typeof oldChild === 'object' && typeof newChild === 'object' && oldChild.type !== newChild.type)) {
+    const newElement = createElement(newChild)
+    if (newElement) {
+      if (domChild) {
+        parent.replaceChild(newElement, domChild)
+      } else {
+        parent.appendChild(newElement)
+      }
+    }
+    return
+  }
   
-  // Mettre à jour les enfants
-  const oldChildren = oldChild.props?.children || []
-  const newChildren = newChild.props?.children || []
-  diffAndUpdateChildren(domChild, oldChildren, newChildren)
+  // Both are elements of the same type
+  if (typeof oldChild === 'object' && typeof newChild === 'object') {
+    // Update element properties
+    updateElementProps(domChild, oldChild.props || {}, newChild.props || {})
+    
+    // Update children
+    const oldChildren = oldChild.props?.children || []
+    const newChildren = newChild.props?.children || []
+    diffAndUpdateChildren(domChild, oldChildren, newChildren)
+  }
 }
 
 // Met à jour les propriétés d'un élément
@@ -169,13 +184,33 @@ export function diffAndUpdate(parent, oldVirtualTree, newVirtualTree) {
   if (!oldVirtualTree) {
     // Premier rendu
     parent.innerHTML = ''
-    const newElement = createElement(newVirtualTree)
-    if (newElement) {
-      parent.appendChild(newElement)
+    if (newVirtualTree.type === 'div' && newVirtualTree.props && newVirtualTree.props.children) {
+      // Handle container div - render children directly
+      const children = newVirtualTree.props.children
+      const normalizedChildren = normalizeChildren(children)
+      for (const child of normalizedChildren) {
+        const childElement = createElement(child)
+        if (childElement) {
+          parent.appendChild(childElement)
+        }
+      }
+    } else {
+      const newElement = createElement(newVirtualTree)
+      if (newElement) {
+        parent.appendChild(newElement)
+      }
     }
   } else {
     // Mise à jour avec diffing
-    updateChild(parent, 0, oldVirtualTree, newVirtualTree)
+    if (newVirtualTree.type === 'div' && newVirtualTree.props && newVirtualTree.props.children &&
+        oldVirtualTree.type === 'div' && oldVirtualTree.props && oldVirtualTree.props.children) {
+      // Handle container div - diff children directly
+      const oldChildren = oldVirtualTree.props.children
+      const newChildren = newVirtualTree.props.children
+      diffAndUpdateChildren(parent, oldChildren, newChildren)
+    } else {
+      updateChild(parent, 0, oldVirtualTree, newVirtualTree)
+    }
   }
 }
 

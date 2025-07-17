@@ -21,11 +21,13 @@ function updateStateWithoutRender(newState) {
 function addTodo(title, shouldMaintainFocus = false) {
   const trimmed = title.trim()
   if (!trimmed) return
+  
   store.setState({
     ...store.state,
     todos: [...store.state.todos, { title: trimmed, completed: false }],
     newTodo: ''
   })
+  
   // Keep focus on the input after state update
   if (shouldMaintainFocus) {
     setTimeout(() => {
@@ -186,9 +188,8 @@ function render() {
                 placeholder: 'What needs to be done?',
                 value: newTodo,
                 oninput: e => {
-                  const input = e.target
-                  const value = input.value || ''
-                  updateStateWithoutRender({ ...store.state, newTodo: value })
+                  const value = e.target.value || ''
+                  store.setState({ ...store.state, newTodo: value })
                 },
                 onkeydown: e => {
                   if (e.key === 'Enter') {
